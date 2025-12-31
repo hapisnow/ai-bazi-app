@@ -5,10 +5,10 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
-# 从环境变量获取 Key
+# Vercel 环境变量
 API_KEY = os.environ.get("GEMINI_API_KEY")
 
-# 依然用你之前成功的 Gemma 3
+# 模型：Gemma 3 (速度快，效果好)
 MODEL_NAME = "gemma-3-4b-it"
 
 app = FastAPI()
@@ -34,22 +34,19 @@ class DivinationRequest(BaseModel):
 @app.post("/api/analyze")
 async def analyze(req: DivinationRequest):
     if not API_KEY:
-        return {"score":0, "level":"配置错", "core_text": "Vercel 环境变量未配置 API Key", "life_trend":[]}
+        return {"score":0, "level":"配置错", "core_text": "API Key 未配置", "pros":[], "cons":[]}
 
-    # 处理空问题逻辑
+    # 逻辑：如果前端没传问题，后端自动补全为“流年运势”
     user_event = req.event.strip()
     if not user_event:
-        user_event = "请分析该命主2025年的整体流年运势（包含事业、财运、健康），并给出综合建议。"
+        user_event = "请分析该命主 2025 年的整体流年运势（事业、财运、健康），并给出综合建议。"
 
-    print(f"请求: {req.name}, 问题: {user_event}")
-
-    # 提示词
     prompt_text = f"""
     Role: Professional Fortune Teller.
     User: {req.name}, Gender:{req.gender}, Birth:{req.birth_year}-{req.birth_month}-{req.birth_day} {req.birth_hour}h.
     Question: {user_event}
     
-    Requirement: Return VALID JSON ONLY. No markdown blocks.
+    Requirement: Return VALID JSON ONLY. No markdown.
     Structure:
     {{
         "score": 88,
@@ -63,23 +60,20 @@ async def analyze(req: DivinationRequest):
     }}
     """
     
-    # 构造请求
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL_NAME}:generateContent?key={API_KEY}"
     payload = {"contents": [{"parts": [{"text": prompt_text}]}]}
 
     try:
-        # 增加 timeout 到 60秒，防止 Vercel 报错 504/500
-        response = requests.post(url, json=payload, timeout=60)
+        response = requests.post(url, json=payload, timeout=50)
         
         if response.status_code == 200:
             data = response.json()
             try:
-                # 清洗数据
                 raw = data['candidates'][0]['content']['parts'][0]['text']
                 clean = raw.replace("```json", "").replace("```", "").strip()
                 return json.loads(clean)
             except:
-                return {"score":0, "level":"解析错", "core_text": "AI 返回格式异常，请重试", "pros":[], "cons":[]}
+                return {"score":0, "level":"解析错", "core_text": "AI 返回数据格式异常", "pros":[], "cons":[]}
         else:
             return {"score":0, "level":"API错", "core_text": f"Google拒绝: {response.status_code}", "pros":[], "cons":[]}
 
