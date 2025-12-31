@@ -1,25 +1,16 @@
 import os
 import json
-import uvicorn
 import requests
-import urllib3
 from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
-# 1. 禁用 SSL 警告
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+# --- 部署版配置 ---
+# 1. 优先从环境变量取 Key (部署到 Vercel 必须用这个)
+# 2. 如果本地运行，fallback 到硬编码的 Key
+API_KEY = os.environ.get("GEMINI_API_KEY", "AIzaSyCxIJHDkCE7ZR_2IGcgz3lRIFq2g0ezczM")
 
-# --- 配置区域 ---
-API_KEY = "AIzaSyCxIJHDkCE7ZR_2IGcgz3lRIFq2g0ezczM" 
-
-# 代理配置
-PROXIES = {
-    "http": "http://127.0.0.1:7897",
-    "https": "http://127.0.0.1:7897"
-}
-
-# 指定模型: Gemma 3
+# 指定模型
 MODEL_NAME = "gemma-3-4b-it"
 
 app = FastAPI()
@@ -44,59 +35,58 @@ class DivinationRequest(BaseModel):
 
 @app.post("/api/analyze")
 async def analyze(req: DivinationRequest):
-    print(f"--- 收到请求: {req.name} (模型: {MODEL_NAME}) ---")
+    if not API_KEY:
+        return {"score":0, "level":"配置错误", "core_text": "后端未配置 API Key", "life_trend":[]}
+
+    print(f"--- 收到请求: {req.name} ---")
     
+    # 🌟 逻辑优化：如果用户没填 event，自动补充默认问题
+    user_question = req.event.strip()
+    if not user_question:
+        user_question = "请分析该命主 2025 年的整体流年运势（事业、财运、感情），并给出综合建议。"
+
     prompt_text = f"""
-    Role: Chinese BaZi Fortune Teller.
-    User: {req.name}, {req.gender}, {req.birth_year}-{req.birth_month}-{req.birth_day} {req.birth_hour}h.
-    BaZi: {json.dumps(req.bazi_json, ensure_ascii=False)}
-    Question: {req.event}
+    Role: Professional Chinese BaZi Fortune Teller.
+    Task: Analyze the user's fortune based on BaZi and the question.
     
-    Return JSON ONLY. No Markdown.
+    User Profile:
+    - Name: {req.name}
+    - Gender: {req.gender} (1=Male, 0=Female)
+    - Birth: {req.birth_year}-{req.birth_month}-{req.birth_day} Hour: {req.birth_hour}
+    - Question/Event: {user_question}
+    
+    Requirement:
+    Return ONLY a valid JSON string. Do not use Markdown code blocks.
+    The JSON must match this structure exactly:
     {{
-        "score": 88,
+        "score": 85,
         "level": "吉",
-        "relation": "相生",
-        "core_text": "100 words concise analysis...",
-        "pros": ["Pro1", "Pro2"],
-        "cons": ["Con1", "Con2"],
+        "relation": "五行相生",
+        "core_text": "Write a concise analysis (under 100 words) in Chinese. Be encouraging and mystical.",
+        "pros": ["Point 1", "Point 2"],
+        "cons": ["Risk 1", "Risk 2"],
         "life_trend": [60, 75, 80, 85, 70, 65],
-        "paid_content": {{ "soul": "...", "strategy": "...", "dates": ["..."], "avatar": "..." }}
+        "paid_content": {{ "soul": "guidance", "strategy": "advice", "dates": ["date1"], "avatar": "suggestion" }}
     }}
     """
     
     payload = {"contents": [{"parts": [{"text": prompt_text}]}]}
-    
-    # ---------------------------------------------------------
-    # 👇 重点在这里：我已经帮你把 URL 里的脏字符全部清理干净了
-    # ---------------------------------------------------------
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL_NAME}:generateContent?key={API_KEY}"
 
     try:
-        print(f"⚡️ 正在呼叫 {MODEL_NAME} ...")
-        
-        response = requests.post(
-            url, 
-            json=payload, 
-            proxies=PROXIES, 
-            timeout=30, 
-            verify=False
-        )
+        # Vercel 服务器在美国，直连 Google，timeout 设置为 45秒 防止稍微慢一点就报错
+        response = requests.post(url, json=payload, timeout=45)
         
         if response.status_code == 200:
-            print(f"🎉 生成成功！")
             data = response.json()
-            raw_text = data['candidates'][0]['content']['parts'][0]['text']
-            clean_text = raw_text.replace("```json", "").replace("```", "").strip()
-            return json.loads(clean_text)
-        
+            try:
+                raw_text = data['candidates'][0]['content']['parts'][0]['text']
+                clean_text = raw_text.replace("```json", "").replace("```", "").strip()
+                return json.loads(clean_text)
+            except Exception as parse_e:
+                print(f"解析失败: {parse_e}")
+                return {"score":0, "level":"解析错误", "core_text": "天机晦涩，数据解析异常，请重试。", "life_trend":[]}
         else:
-            print(f"❌ API 报错: {response.status_code} - {response.text}")
-            return {"score":0, "level":"报错", "core_text": f"Google拒绝: {response.status_code}", "life_trend":[]}
+            return {"score":0, "level":"API报错", "core_text": f"Google拒绝连接: {response.status_code}", "life_trend":[]}
 
     except Exception as e:
-        print(f"❌ 连接错误: {e}")
-        return {"score":0, "level":"系统错误", "core_text": "连接中断，请检查VPN。", "life_trend":[]}
-
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
