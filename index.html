@@ -3,118 +3,224 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI 天机·决策 V11.0</title>
+    <title>AI 八字决策 | Cyber-BaZi V11.0</title>
+    <script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.6.12/lunar.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    
     <style>
         :root {
-            --bg-color: #050505;
-            --card-bg: #111115;
-            --input-bg: #1a1a20;
-            --text-gold: #ffd700; /* 截图里的金色 */
-            --text-blue: #00f2ea; /* 截图里的青色 */
-            --text-gray: #888;
-            --border: #333;
+            --bg-color: #08080a;
+            --primary-red: #ff3333;
+            --primary-gold: #d4af37;
+            --primary-cyan: #00f0ff;
+            --glass-bg: rgba(20, 20, 28, 0.95);
+            --border-color: rgba(255, 255, 255, 0.1);
         }
 
-        body { margin: 0; padding: 20px; background: var(--bg-color); color: #fff; font-family: -apple-system, sans-serif; }
-        .container { max-width: 600px; margin: 0 auto; }
-
-        /* 1. 顶部标题区 (还原截图风格) */
-        .header { text-align: center; margin-bottom: 30px; margin-top: 20px; }
-        .main-title { font-size: 28px; font-weight: bold; color: var(--text-gold); letter-spacing: 2px; text-shadow: 0 2px 10px rgba(255, 215, 0, 0.2); }
-        .sub-title { font-size: 12px; color: var(--text-blue); letter-spacing: 3px; margin-top: 5px; font-weight: 600; text-transform: uppercase; }
-
-        /* 2. 输入卡片 (还原截图布局) */
-        .input-card { background: var(--card-bg); padding: 25px; border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-
-        .row { display: flex; gap: 15px; margin-bottom: 20px; }
-        .col { flex: 1; }
+        * { box-sizing: border-box; margin: 0; padding: 0; outline: none; -webkit-tap-highlight-color: transparent; }
         
-        .label { display: block; color: var(--text-gold); font-size: 13px; font-weight: bold; margin-bottom: 8px; }
-        
+        body {
+            background-color: var(--bg-color);
+            color: #e0e0e0;
+            font-family: "PingFang SC", "Heiti SC", sans-serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            background-image: 
+                radial-gradient(circle at 50% 0%, #151520 0%, #000 100%),
+                url('https://images.unsplash.com/photo-1534796636912-3b95b3ab5980?q=80&w=1000&auto=format&fit=crop');
+            background-size: cover;
+            background-attachment: fixed;
+            padding: 20px 0;
+        }
+
+        .container { width: 100%; max-width: 480px; padding: 0 16px; position: relative; padding-bottom: 60px;}
+
+        /* Header */
+        .header { text-align: center; margin: 20px 0 30px; }
+        .header h1 { color: var(--primary-gold); font-size: 1.6rem; letter-spacing: 2px; text-shadow: 0 0 15px rgba(212, 175, 55, 0.3); }
+        .header p { color: var(--primary-cyan); font-size: 0.65rem; letter-spacing: 3px; text-transform: uppercase; opacity: 0.8; }
+
+        .card {
+            background: var(--glass-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+        }
+
+        /* 表单样式 */
+        .form-label { display: block; color: var(--primary-gold); font-size: 0.85rem; margin-bottom: 8px; font-weight: 600; }
+        .form-row { display: flex; gap: 10px; margin-bottom: 18px; }
+        .form-col { flex: 1; position: relative; }
         input, select, textarea {
-            width: 100%; background: var(--input-bg); border: 1px solid var(--border);
-            color: #fff; padding: 12px; border-radius: 8px; font-size: 14px; outline: none; box-sizing: border-box; transition: 0.3s;
+            width: 100%; background: rgba(255,255,255,0.04); border: 1px solid #333;
+            border-radius: 8px; padding: 12px; color: #fff; font-size: 0.95rem; transition: 0.3s; font-family: inherit;
         }
-        input:focus, select:focus, textarea:focus { border-color: var(--text-gold); }
+        input:focus, select:focus, textarea:focus { border-color: var(--primary-cyan); background: rgba(255,255,255,0.08); }
+        textarea:disabled { background: rgba(0,0,0,0.3); border-color: #222; color: #666; font-style: italic; }
+        input[type="date"] { position: relative; z-index: 1; }
+        input[type="date"]::-webkit-calendar-picker-indicator { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 2; }
+        select option { background-color: #1a1a1a; color: #fff; }
 
-        /* 3. 标签选择区 */
-        .tags-container { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
-        .tag {
-            font-size: 12px; padding: 6px 12px; border-radius: 20px; background: #222; border: 1px solid #444; color: #aaa; cursor: pointer; transition: 0.3s;
+        /* Tags */
+        .tags-container { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: none; }
+        .tag-chip { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 6px 14px; font-size: 0.75rem; white-space: nowrap; cursor: pointer; color: #999; }
+        .tag-chip.active { background: rgba(0, 240, 255, 0.15); border-color: var(--primary-cyan); color: #fff; box-shadow: 0 0 10px rgba(0,240,255,0.2); }
+
+        /* --- 修改点1：替换指纹为正常按钮 --- */
+        .btn-area { margin-top: 25px; }
+        .action-btn {
+            width: 100%; padding: 16px; 
+            background: linear-gradient(90deg, #d4af37, #f7e49a);
+            color: #3d2e00; font-size: 1rem; font-weight: 800; border: none; border-radius: 12px;
+            cursor: pointer; box-shadow: 0 4px 20px rgba(212, 175, 55, 0.2); 
+            transition: transform 0.2s, opacity 0.2s;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
         }
-        .tag.active { background: linear-gradient(45deg, var(--text-blue), #0077ff); color: #000; border-color: transparent; font-weight: bold; }
-
-        /* 4. 按钮区 */
-        .btn-area { margin-top: 25px; text-align: center; }
-        .start-btn {
-            width: 100%; padding: 16px; background: linear-gradient(90deg, #d4af37, #f7e49a); 
-            color: #3d2e00; font-size: 16px; font-weight: 800; border: none; border-radius: 10px;
-            cursor: pointer; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3); transition: transform 0.2s;
-        }
-        .start-btn:active { transform: scale(0.98); }
-        .start-btn:disabled { background: #444; color: #888; cursor: not-allowed; box-shadow: none; }
-
-        /* 5. 结果展示区 (保持你喜欢的样式) */
-        .result-box { display: none; margin-top: 30px; background: #15151a; border-radius: 16px; border: 1px solid #333; overflow: hidden; animation: slideUp 0.5s ease; }
-        .result-header { background: rgba(255, 215, 0, 0.1); padding: 15px 20px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
-        .result-title { color: var(--text-gold); font-size: 16px; font-weight: bold; }
-        .result-score { font-size: 24px; font-weight: 900; color: var(--text-blue); }
+        .action-btn:active { transform: scale(0.98); }
+        .action-btn:disabled { opacity: 0.7; cursor: not-allowed; background: #444; color: #888; box-shadow: none; }
         
-        .result-content { padding: 20px; line-height: 1.8; font-size: 15px; color: #ddd; text-align: justify; }
-        
-        .list-group { margin-top: 15px; font-size: 13px; }
-        .list-item { margin-bottom: 6px; padding: 8px; background: rgba(255,255,255,0.03); border-radius: 6px; }
-
-        /* 错误提示 */
-        .error-toast { 
-            display: none; margin-top: 15px; padding: 12px; background: rgba(255, 69, 58, 0.15); 
-            border: 1px solid #ff453a; color: #ff453a; border-radius: 8px; font-size: 13px; text-align: center;
+        .error-msg {
+            background: rgba(255, 51, 51, 0.15); border: 1px solid #ff3333; color: #ff3333;
+            padding: 12px; border-radius: 8px; margin-top: 15px; font-size: 0.85rem;
+            display: none; text-align: center;
         }
 
-        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        /* --- 结果页 --- */
+        .result-screen { display: none; }
+        
+        .score-row { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid #222; padding-bottom: 15px; }
+        .score-big { font-size: 3.5rem; line-height: 1; font-weight: 800; color: var(--primary-gold); font-family: Impact, sans-serif; }
+        .score-label { font-size: 0.8rem; color: #666; margin-top: 5px; }
+        .user-meta { text-align: right; font-size: 0.8rem; color: #888; }
+        .user-meta span { color: #fff; font-weight: bold; margin-left: 5px; }
+
+        .section-header { display: flex; align-items: center; justify-content: space-between; margin: 30px 0 15px; border-left: 3px solid var(--primary-gold); padding-left: 10px; }
+        .section-title { color: #fff; font-size: 1rem; font-weight: bold; }
+        .tag-free { background: rgba(0, 240, 255, 0.1); color: var(--primary-cyan); padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; }
+
+        .decision-card {
+            background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%);
+            border-radius: 12px; padding: 20px; border: 1px solid rgba(255,255,255,0.08); margin-bottom: 20px;
+        }
+        .decision-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px dashed rgba(255,255,255,0.1); }
+        .decision-badge { padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 0.8rem; }
+        
+        .badge-good { background: rgba(76,175,80,0.2); color: #4caf50; border: 1px solid #4caf50; }
+        .badge-warn { background: rgba(255,87,34,0.2); color: #ff5722; border: 1px solid #ff5722; }
+        .badge-safe { background: rgba(0, 240, 255, 0.2); color: var(--primary-cyan); border: 1px solid var(--primary-cyan); }
+
+        .decision-relation { font-size: 0.8rem; color: #888; }
+        .decision-highlight { color: var(--primary-gold); font-weight: bold; }
+        .decision-event-title { font-size: 0.85rem; color: #ccc; margin-bottom: 12px; font-style: italic; }
+
+        .decision-core-text { font-size: 0.95rem; color: #e0e0e0; line-height: 1.6; text-align: justify; margin-bottom: 20px; }
+
+        .swot-box { display: flex; flex-direction: column; gap: 12px; }
+        .swot-section { background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; }
+        .swot-title { font-size: 0.8rem; font-weight: bold; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+        .swot-list { list-style: none; padding: 0; margin: 0; }
+        .swot-list li { font-size: 0.8rem; color: #ccc; margin-bottom: 6px; padding-left: 12px; position: relative; line-height: 1.4; }
+        .swot-list li::before { content: "•"; position: absolute; left: 0; color: #666; }
+
+        .swot-pro .swot-title { color: #4caf50; }
+        .swot-pro { border-left: 2px solid #4caf50; }
+        .swot-con .swot-title { color: #ff5252; }
+        .swot-con { border-left: 2px solid #ff5252; }
+
+        .chart-box { width: 100%; height: 240px; }
+        
+        .luck-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+        .luck-item { 
+            background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; 
+            border: 1px solid rgba(255,255,255,0.05); transition: 0.2s; 
+        }
+        .luck-item.high-star {
+            background: linear-gradient(135deg, rgba(212,175,55,0.15) 0%, rgba(212,175,55,0.05) 100%);
+            border: 1px solid rgba(212, 175, 55, 0.4); box-shadow: 0 4px 15px rgba(212, 175, 55, 0.1);
+        }
+        .luck-item.high-star .luck-name { color: var(--primary-gold); }
+        .luck-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .luck-name { font-size: 0.75rem; color: #aaa; font-weight: bold; }
+        .luck-stars { color: var(--primary-gold); font-size: 0.7rem; letter-spacing: 1px; }
+        .luck-desc { font-size: 0.7rem; color: #ccc; line-height: 1.4; }
+
+        .trend-info-box {
+            background: rgba(0, 0, 0, 0.3); border: 1px solid #333; border-radius: 12px;
+            padding: 20px; margin-top: 5px; margin-bottom: 20px; position: relative; overflow: hidden; transition: all 0.3s;
+        }
+        .trend-info-box.active {
+            border-color: var(--primary-cyan); background: rgba(0, 240, 255, 0.05); box-shadow: 0 0 15px rgba(0, 240, 255, 0.1);
+        }
+        .trend-age { color: var(--primary-cyan); font-weight: bold; font-size: 1.1rem; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+        .trend-keyword { font-size: 0.7rem; background: rgba(0, 240, 255, 0.2); padding: 2px 6px; border-radius: 4px; color: #fff; font-weight: normal; }
+        .trend-text { color: #ddd; font-size: 0.9rem; line-height: 1.6; text-align: justify; }
+        .trend-advice { margin-top: 10px; font-size: 0.8rem; color: #888; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 8px; font-style: italic; }
+        .trend-hint { font-size: 0.75rem; color: #666; text-align: center; padding: 10px; }
+
+        .paywall-container { position: relative; margin-top: 40px; border: 1px solid #333; border-radius: 12px; overflow: hidden; background: #050505; }
+        .blur-content { filter: blur(12px); opacity: 0.4; user-select: none; padding: 20px; transition: 0.6s; }
+        .blur-content.unlocked { filter: none; opacity: 1; user-select: auto; background: rgba(20,20,30,0.5); }
+
+        .premium-card { margin-bottom: 20px; border-left: 2px solid var(--primary-gold); padding-left: 15px; }
+        .premium-title { font-size: 0.9rem; color: var(--primary-gold); font-weight: bold; margin-bottom: 8px; }
+        .premium-text { font-size: 0.85rem; color: #ccc; line-height: 1.6; text-align: justify; }
+
+        .unlock-overlay { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background: linear-gradient(to bottom, rgba(5,5,8,0.85), rgba(5,5,8,0.99));
+            display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10;
+        }
+        .btn-pay {
+            width: 85%; padding: 14px; border-radius: 30px; border: none; font-weight: bold; font-size: 1rem; cursor: pointer;
+            background: linear-gradient(90deg, #d4af37, #f3dba8); color: #000; margin-bottom: 15px;
+            box-shadow: 0 0 20px rgba(212,175,55,0.3); animation: pulse 2s infinite;
+        }
+        .btn-invite {
+            width: 85%; padding: 14px; border-radius: 30px; border: 1px solid var(--primary-cyan); 
+            background: rgba(0, 240, 255, 0.1); color: var(--primary-cyan); font-weight: bold; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.3s;
+        }
+        .btn-invite:active { background: rgba(0, 240, 255, 0.3); }
+        .invite-note { font-size: 0.75rem; color: #666; margin-top: 12px; }
+
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        .hidden { display: none !important; }
+
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="header">
-        <div class="main-title">天机 · 决策</div>
-        <div class="sub-title">CYBER BAZI V11.0</div>
+        <h1>天机 · 决策</h1>
+        <p>CYBER BAZI V11.0</p>
     </div>
 
-    <div class="input-card">
-        <div class="row">
-            <div class="col" style="flex: 2;">
-                <label class="label">姓名</label>
-                <input type="text" id="name" placeholder="请输入">
-            </div>
-            <div class="col">
-                <label class="label">性别</label>
-                <select id="gender">
-                    <option value="1">男</option>
-                    <option value="0">女</option>
-                </select>
-            </div>
+    <div id="inputCard" class="card">
+        <div class="form-row">
+            <div class="form-col"><label class="form-label">姓名</label><input type="text" id="userName" placeholder="请输入"></div>
+            <div class="form-col"><label class="form-label">性别</label><select id="userGender"><option value="1">男</option><option value="0">女</option></select></div>
         </div>
-
-        <div class="row">
-            <div class="col" style="flex: 2;">
-                <label class="label">公历生日</label>
-                <div style="display: flex; gap: 5px;">
-                    <input type="number" id="year" placeholder="1998" style="flex:1.5">
-                    <input type="number" id="month" placeholder="08" style="flex:1">
-                    <input type="number" id="day" placeholder="08" style="flex:1">
-                </div>
+        <div class="form-row">
+            <div class="form-col" style="flex:2">
+                <label class="form-label">公历生日</label>
+                <input type="date" id="birthDate" value="1998-08-08">
             </div>
-            <div class="col">
-                <label class="label">时辰</label>
-                <select id="hour">
-                    <option value="0">子 (23-01)</option>
+            <div class="form-col">
+                <label class="form-label">时辰</label>
+                <select id="birthHour">
+                    <option value="9">巳 (09-11)</option>
+                    <option value="23">子 (23-01)</option>
                     <option value="1">丑 (01-03)</option>
                     <option value="3">寅 (03-05)</option>
                     <option value="5">卯 (05-07)</option>
                     <option value="7">辰 (07-09)</option>
-                    <option value="9" selected>巳 (09-11)</option>
                     <option value="11">午 (11-13)</option>
                     <option value="13">未 (13-15)</option>
                     <option value="15">申 (15-17)</option>
@@ -124,149 +230,406 @@
                 </select>
             </div>
         </div>
-
-        <div style="margin-bottom: 10px;">
-            <label class="label">所测何事?</label>
-            <div class="tags-container" id="tagsArea">
-                <div class="tag active" onclick="selectTag('fortune')">✨ 运势</div>
-                <div class="tag" onclick="selectTag('wealth')">💰 财运</div>
-                <div class="tag" onclick="selectTag('career')">💼 事业</div>
-                <div class="tag" onclick="selectTag('health')">💊 健康</div>
-                <div class="tag" onclick="selectTag('love')">❤️ 姻缘</div>
+        <div style="margin-bottom: 20px;">
+            <label class="form-label">所测何事？</label>
+            <div class="tags-container">
+                <div class="tag-chip active" onclick="setPh('luck', this)">🔮 运势</div>
+                <div class="tag-chip" onclick="setPh('wealth', this)">💰 财运</div>
+                <div class="tag-chip" onclick="setPh('career', this)">💼 事业</div>
+                <div class="tag-chip" onclick="setPh('health', this)">💊 健康</div>
+                <div class="tag-chip" onclick="setPh('love', this)">❤️ 姻缘</div>
             </div>
+            <textarea id="eventInput" rows="3" disabled style="opacity:0.6; font-style:italic;">查看整体运势，如果想测具体事项可选择其他标签，输入内容</textarea>
         </div>
-
-        <textarea id="eventInput" rows="3" placeholder="查看整体运势，如果想测具体事项可选择其他标签，输入内容"></textarea>
 
         <div class="btn-area">
-            <button class="start-btn" id="analyzeBtn" onclick="start()">开始推演</button>
+            <button id="analyzeBtn" class="action-btn" onclick="startAnalysis()">
+                ✨ 开始 AI 推演
+            </button>
         </div>
-        
-        <div class="error-toast" id="errorBox"></div>
+        <div id="errorBox" class="error-msg"></div>
     </div>
 
-    <div class="result-box" id="resultCard">
-        <div class="result-header">
-            <div class="result-title" id="resTitle">整体运势</div>
-            <div class="result-score" id="resScore">--</div>
+    <div id="resultCard" class="card result-screen">
+        
+        <div class="score-row">
+            <div>
+                <div class="score-big" id="resScore">0</div>
+                <div class="score-label">AI 吉凶综合指数</div>
+            </div>
+            <div class="user-meta">
+                <div>命主：<span id="resName">--</span></div>
+                <div>八字：<span id="resBazi">己土</span></div>
+            </div>
+        </div>
+
+        <div class="section-header">
+            <div class="section-title" id="decisionSectionTitle">🎯 事项决策推演 (Free)</div>
+            <div class="tag-free">核心分析</div>
         </div>
         
-        <div class="result-content">
-            <div id="resText">正在链接天机网络...</div>
-            
-            <div class="list-group">
-                <div style="color: #4cd964; margin-bottom:5px; font-weight:bold;">✅ 有利因素</div>
-                <div id="resPros"></div>
+        <div class="decision-card" id="decisionFreeCard">
+            <div class="decision-event-title" id="decisionTitle">所测之事：--</div>
+            <div class="decision-header">
+                <div class="decision-badge" id="decisionBadge">计算中...</div>
+                <div class="decision-relation" id="decisionRel">五行关系：--</div>
             </div>
-            <div class="list-group" style="margin-top:15px;">
-                <div style="color: #ff3b30; margin-bottom:5px; font-weight:bold;">⚠️ 潜在风险</div>
-                <div id="resCons"></div>
+            
+            <div class="decision-core-text" id="decisionText">分析中...</div>
+            
+            <div class="swot-box">
+                <div class="swot-section swot-pro">
+                    <div class="swot-title">✅ 有利因素 (Pros)</div>
+                    <ul class="swot-list" id="swotProList"></ul>
+                </div>
+                <div class="swot-section swot-con">
+                    <div class="swot-title">⚠️ 潜在风险 (Cons)</div>
+                    <ul class="swot-list" id="swotConList"></ul>
+                </div>
             </div>
         </div>
+
+        <div class="section-header">
+            <div class="section-title">📊 命盘六维全景</div>
+        </div>
+        <div id="radarChart" class="chart-box"></div>
+        <div class="luck-grid" id="freeLuckGrid"></div>
+
+        <div class="section-header">
+            <div class="section-title">🐉 人生流年大运</div>
+        </div>
+        <div id="lifeTrendChart" class="chart-box"></div>
+        <div class="trend-info-box" id="trendDetailBox">
+            <div class="trend-hint" id="trendDefaultHint">👆 点击上方折线图节点，查看详情</div>
+            <div id="trendContent" style="display:none;">
+                <div class="trend-age" id="trendAge">--岁 <span class="trend-keyword" id="trendKw">--</span></div>
+                <div class="trend-text" id="trendText">--</div>
+                <div class="trend-advice" id="trendAdv">--</div>
+            </div>
+        </div>
+
+        <div class="paywall-container">
+            <div style="padding:15px; border-bottom:1px solid #222; background:rgba(212,175,55,0.05);">
+                <div style="color:var(--primary-gold); font-weight:bold; font-size:0.9rem;">🔐 深度决策方案 & 避坑指南</div>
+            </div>
+
+            <div class="blur-content" id="hiddenContent">
+                
+                <div class="premium-card" style="border-left-color: var(--primary-cyan);">
+                    <div class="premium-title">⚡ 决策专项执行策略 (Exclusive)</div>
+                    <div class="premium-text" id="paidDecisionDeep"></div>
+                </div>
+
+                <div class="premium-card">
+                    <div class="premium-title">🚀 命盘核心破局策略</div>
+                    <div class="premium-text" id="paidStrategy"></div>
+                </div>
+                
+                <div class="premium-card" style="border-left-color: #c471ed;">
+                    <div class="premium-title">📅 2025 暴富日历</div>
+                    <div class="premium-text">以下日期财库大开，适合行动：</div>
+                    <div class="wealth-date-grid" id="paidDates"></div>
+                </div>
+            </div>
+
+            <div class="unlock-overlay" id="unlockOverlay">
+                <button class="btn-pay" onclick="unlockPay()">解锁完整报告 (¥9.9)</button>
+                <div style="display:flex; align-items:center; width:85%; margin:10px 0;">
+                    <div style="flex:1; height:1px; background:#333;"></div>
+                    <div style="padding:0 10px; font-size:0.7rem; color:#666;">OR</div>
+                    <div style="flex:1; height:1px; background:#333;"></div>
+                </div>
+                <button class="btn-invite" onclick="unlockInvite()"><span>🔗</span> 邀请 1 位好友免费解锁</button>
+                <div class="invite-note" id="inviteStatus">当前进度：0/1 人</div>
+            </div>
+        </div>
+
+        <button style="width:100%; padding:15px; background:transparent; border:1px solid #333; color:#666; margin-top:30px; border-radius:8px;" onclick="location.reload()">再测一事</button>
     </div>
 </div>
 
 <script>
-    function selectTag(type) {
-        // 标签样式切换
-        const tags = document.querySelectorAll('.tag');
-        tags.forEach(t => t.classList.remove('active'));
-        event.target.classList.add('active');
+    // --- 数据 & 状态 ---
+    let currentTag = 'luck'; // 默认
+    
+    // 默认大运数据 (用于兜底显示)
+    let lifeData = [
+        { age: "25岁", kw: "潜龙勿用", val: 60, desc: "初入职场，凡事起头难。五行气场磨合期，虽然才华横溢但易受压制，需沉住气。", adv: "建议：沉淀技能，寻找属马/蛇的前辈作为导师。" },
+        { age: "35岁", kw: "飞龙在天", val: 85, desc: "大运天干透出财星，事业迎来第一个黄金爆发期。创业、置业、升职皆在此运，风头正劲。", adv: "建议：大胆激进，利用杠杆撬动资源，但需防烂桃花干扰。" },
+        { age: "45岁", kw: "亢龙有悔", val: 55, desc: "太岁临门，冲克本命年柱。容易出现决策失误导致资金链紧张，且需关注父母健康。", adv: "建议：收缩战线，现金为王，切勿进行高风险借贷。" },
+        { age: "55岁", kw: "紫气东来", val: 95, desc: "人生巅峰大运，天乙贵人与月德合同时降临。名利双收，社会地位显著提升。", adv: "建议：布局传承，整理资产，享受成果。" },
+        { age: "65岁", kw: "闲云野鹤", val: 80, desc: "晚年运势平稳，食神生财。此时财运虽好，但主要来自于被动收入或子女供养。", adv: "建议：著书立说，传承技艺，保持身心愉悦。" },
+        { age: "75岁", kw: "归藏于密", val: 70, desc: "身体机能下降，但精神世界富足。宜静养，忌远行。", adv: "建议：修身养性，关注心血管健康。" }
+    ];
 
+    window.onload = function() {
+        const defaultLuckBtn = document.querySelector('.tag-chip');
+        if(defaultLuckBtn) setPh('luck', defaultLuckBtn);
+        // 初始化日期选择器为今天
+        document.getElementById('birthDate').value = "1998-08-08"; 
+    }
+
+    function setPh(type, el) {
+        currentTag = type;
+        document.querySelectorAll('.tag-chip').forEach(c => c.classList.remove('active'));
+        el.classList.add('active');
+        
         const input = document.getElementById('eventInput');
         
-        // 逻辑：如果是“运势”，清空输入框
-        if (type === 'fortune') {
+        if (type === 'luck') {
+            input.disabled = true;
             input.value = "";
             input.placeholder = "查看整体运势，如果想测具体事项可选择其他标签，输入内容";
+            input.style.opacity = "0.6"; input.style.fontStyle = "italic";
         } else {
-            // 其他标签，聚焦输入框提示用户输入
-            input.focus();
-            input.placeholder = "请详细描述您想测算的具体问题...";
+            input.disabled = false;
+            input.value = ""; 
+            input.style.opacity = "1"; input.style.fontStyle = "normal";
+            
+            if (type === 'wealth') input.placeholder = "例如：近期想投资股票，或者想知道今年有没有偏财运...";
+            if (type === 'career') input.placeholder = "例如：工作遇到瓶颈想跳槽，或者想知道今年是否有升职机会...";
+            if (type === 'health') input.placeholder = "例如：最近总是感觉疲惫，想知道身体五行哪里失衡...";
+            if (type === 'love') input.placeholder = "例如：单身想知道何时脱单，或者想测算和现在的对象是否合适...";
         }
     }
 
-    async function start() {
+    // --- 修改点：正式的请求逻辑 ---
+    async function startAnalysis() {
         const btn = document.getElementById('analyzeBtn');
-        const errBox = document.getElementById('errorBox');
-        const resCard = document.getElementById('resultCard');
-        const eventVal = document.getElementById('eventInput').value.trim();
+        const errorBox = document.getElementById('errorBox');
+        const name = document.getElementById('userName').value;
+        const dateVal = document.getElementById('birthDate').value;
+        const eventVal = document.getElementById('eventInput').value;
         
-        const name = document.getElementById('name').value;
-        const year = document.getElementById('year').value;
-
-        // 基础校验
-        if (!name || !year) {
-            alert("请至少填写姓名和出生年份");
+        if(!name || !dateVal) {
+            showError("请输入姓名和出生日期");
             return;
         }
 
-        // 1. 标题逻辑：空 -> 整体运势；有字 -> 事项决策
-        const titleElem = document.getElementById('resTitle');
-        if (!eventVal) {
-            titleElem.innerText = "🌟 整体运势";
-        } else {
-            titleElem.innerText = "🎯 事项决策分析";
-        }
-
-        // UI 状态
+        // 状态重置
         btn.disabled = true;
-        btn.innerText = "正在推演中...";
-        errBox.style.display = 'none';
-        resCard.style.display = 'none';
+        btn.innerText = "⏳ 正在推演天机...";
+        errorBox.style.display = 'none';
 
-        const data = {
+        // 1. 处理日期
+        const [year, month, day] = dateVal.split('-');
+        
+        // 2. 准备数据
+        const reqData = {
             name: name,
-            gender: parseInt(document.getElementById('gender').value),
+            gender: parseInt(document.getElementById('userGender').value),
             birth_year: parseInt(year),
-            birth_month: parseInt(document.getElementById('month').value) || 1,
-            birth_day: parseInt(document.getElementById('day').value) || 1,
-            birth_hour: parseInt(document.getElementById('hour').value),
-            event: eventVal,
-            bazi_json: {}
+            birth_month: parseInt(month),
+            birth_day: parseInt(day),
+            birth_hour: parseInt(document.getElementById('birthHour').value),
+            event: currentTag === 'luck' ? "" : eventVal, // 如果是运势模式，强制为空
+            bazi_json: {} 
         };
 
         try {
+            // 3. 发送请求
             const resp = await fetch('/api/analyze', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
+                body: JSON.stringify(reqData)
             });
 
             if (!resp.ok) {
-                throw new Error(`服务器连接失败 (${resp.status})`);
+                throw new Error(`服务器连接异常 (代码: ${resp.status})`);
             }
 
-            const res = await resp.json();
+            const data = await resp.json();
 
-            // 业务错误检查
-            if (res.score === 0 || res.level.includes("报错")) {
-                throw new Error(res.core_text || "解析失败");
+            if (data.score === 0 || (data.level && data.level.includes("错"))) {
+                throw new Error(data.core_text || "解析失败，请重试");
             }
 
-            // 渲染数据
-            document.getElementById('resScore').innerText = res.score + "分 · " + res.level;
-            document.getElementById('resText').innerText = res.core_text;
-            
-            // 渲染列表
-            const pros = Array.isArray(res.pros) ? res.pros : [];
-            const cons = Array.isArray(res.cons) ? res.cons : [];
-            
-            document.getElementById('resPros').innerHTML = pros.map(p => `<div class="list-item">${p}</div>`).join('');
-            document.getElementById('resCons').innerHTML = cons.map(c => `<div class="list-item">${c}</div>`).join('');
-
-            resCard.style.display = 'block';
-            // 滚动到底部
-            setTimeout(() => resCard.scrollIntoView({behavior: "smooth"}), 100);
+            // 4. 成功，渲染数据
+            renderSuccess(data);
 
         } catch (e) {
-            errBox.style.display = 'block';
-            errBox.innerText = "🚫 出错啦：" + e.message;
+            showError("推演中断：" + e.message);
         } finally {
             btn.disabled = false;
-            btn.innerText = "开始推演";
+            btn.innerText = "✨ 开始 AI 推演";
         }
     }
+
+    function showError(msg) {
+        const box = document.getElementById('errorBox');
+        box.innerText = msg;
+        box.style.display = 'block';
+        // 震动提示
+        if(navigator.vibrate) navigator.vibrate(200);
+    }
+
+    function renderSuccess(data) {
+        document.getElementById('inputCard').classList.add('hidden');
+        document.getElementById('resultCard').style.display='block';
+        
+        // 渲染基本信息
+        document.getElementById('resName').innerText = document.getElementById('userName').value;
+        animateValue('resScore', 0, data.score, 1500);
+
+        // --- 修改点2：标题动态逻辑 ---
+        const titleEl = document.getElementById('decisionSectionTitle');
+        const userEvent = document.getElementById('eventInput').value;
+        const displayTitle = document.getElementById('decisionTitle');
+        
+        if (currentTag === 'luck' && !userEvent) {
+            titleEl.innerText = "🌟 整体运势 (2025流年)";
+            displayTitle.innerText = "所测之事：2025年综合运势扫描";
+        } else {
+            titleEl.innerText = "🎯 事项决策分析";
+            displayTitle.innerText = "所测之事：" + (userEvent.length > 15 ? userEvent.substring(0,15)+"..." : userEvent);
+        }
+
+        // 渲染核心分析
+        document.getElementById('decisionText').innerHTML = data.core_text;
+        document.getElementById('decisionBadge').innerText = data.level + " (" + data.score + ")";
+        document.getElementById('decisionRel').innerText = "五行关系：" + (data.relation || "相生相克");
+        
+        // 渲染 SWOT 列表
+        const pros = Array.isArray(data.pros) ? data.pros : [];
+        const cons = Array.isArray(data.cons) ? data.cons : [];
+        document.getElementById('swotProList').innerHTML = pros.map(p => `<li>${p}</li>`).join('');
+        document.getElementById('swotConList').innerHTML = cons.map(c => `<li>${c}</li>`).join('');
+
+        // 渲染大运图表 (如果后端返回了数据)
+        if (data.life_trend && data.life_trend.length > 0) {
+            // 这里简单模拟将后端分数映射到现有图表结构，为了保持图表完整性，依然使用模拟的文本描述，但更新数值
+            // 实际生产中后端应该返回完整的结构
+             lifeData.forEach((item, index) => {
+                 if(data.life_trend[index]) item.val = data.life_trend[index];
+             });
+        }
+        
+        // 生成图表
+        renderCharts();
+        
+        // 生成六维运势 (Color Coded) - 保持前端生成逻辑以维持视觉
+        generateFreeLuck();
+
+        // 填充付费内容占位
+        document.getElementById('paidStrategy').innerHTML = "1. <strong>五行补救：</strong>命局分析显示，建议多穿黑色/蓝色衣物。<br>2. <strong>流年机遇：</strong>2026年利于文化产业。";
+        let datesHtml = "";
+        ["3月15日", "6月22日", "9月18日", "11月08日", "12月24日"].forEach(d => {
+            datesHtml += `<div class="date-chip"><span>${d}</span>财星合身</div>`; // 样式在CSS里好像漏了，这里补一个简单样式
+        });
+        document.getElementById('paidDates').innerHTML = datesHtml;
+        
+        // 滚动到顶部
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // --- 保持原有的图表和辅助函数 ---
+    
+    // 运势卡片生成
+    function generateFreeLuck() {
+        const data = [
+            { name: "正财运", star: "⭐⭐⭐⭐", text: "薪资稳定，适合稳扎稳打。" },
+            { name: "偏财运", star: "⭐", text: "投资风险高，切勿博彩。" },
+            { name: "事业运", star: "⭐⭐⭐", text: "有印星相助，熬过五月有转机。" },
+            { name: "感情运", star: "⭐⭐", text: "伴侣宫受冲，建议多沟通。" },
+            { name: "健康运", star: "⭐⭐⭐", text: "注意睡眠质量，多喝水。" },
+            { name: "贵人运", star: "⭐⭐⭐⭐⭐", text: "天乙贵人降临，利于求助长辈。" }
+        ];
+        let html = "";
+        data.forEach(item => {
+            const starCount = (item.star.match(/⭐/g) || []).length;
+            const isHighStar = starCount >= 4;
+            html += `
+                <div class="luck-item ${isHighStar ? 'high-star' : ''}">
+                    <div class="luck-head">
+                        <span class="luck-name">${item.name}</span>
+                        <span class="luck-stars">${item.star}</span>
+                    </div>
+                    <div class="luck-desc">${item.text}</div>
+                </div>`;
+        });
+        document.getElementById('freeLuckGrid').innerHTML = html;
+    }
+
+    function renderCharts() {
+        const radarChart = echarts.init(document.getElementById('radarChart'));
+        radarChart.setOption({
+            radar: {
+                indicator: [ {name:'正财',max:100}, {name:'偏财',max:100}, {name:'事业',max:100}, {name:'姻缘',max:100}, {name:'健康',max:100}, {name:'贵人',max:100} ],
+                shape: 'polygon', splitNumber: 4, axisName: {color:'#d4af37'},
+                splitLine: {lineStyle:{color:'rgba(255,255,255,0.1)'}}, splitArea: {show:false}, axisLine: {lineStyle:{color:'rgba(255,255,255,0.1)'}}
+            },
+            series: [{
+                type: 'radar', data: [{ value:[80,40,90,60,75,95], name:'命盘', itemStyle:{color:'#00f0ff'}, areaStyle:{color:'rgba(0,240,255,0.3)'}, lineStyle:{width:2,color:'#00f0ff'} }]
+            }]
+        });
+
+        const lifeChart = echarts.init(document.getElementById('lifeTrendChart'));
+        lifeChart.setOption({
+            grid: { top:30, bottom:20, left:40, right:20 },
+            xAxis: { type:'category', boundaryGap:false, data: lifeData.map(i=>i.age), axisLine:{show:false}, axisLabel:{color:'#888'} },
+            yAxis: { type:'value', splitLine:{lineStyle:{color:'#222'}}, axisLabel:{color:'#666'} },
+            series: [{
+                type: 'line', smooth: true, data: lifeData.map(i=>i.val),
+                symbol: 'circle', symbolSize: 10, 
+                itemStyle: {color:'#d4af37', borderColor:'#fff', borderWidth:2},
+                lineStyle: {width:3, color:'#d4af37'},
+                areaStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(212,175,55,0.4)'},{offset:1,color:'rgba(0,0,0,0)'}]) }
+            }]
+        });
+
+        lifeChart.on('click', function(params) {
+            const dataIndex = params.dataIndex;
+            const info = lifeData[dataIndex];
+            
+            document.getElementById('trendDefaultHint').style.display = 'none';
+            document.getElementById('trendContent').style.display = 'block';
+            document.getElementById('trendAge').innerHTML = `${info.age} <span class="trend-keyword">${info.kw}</span>`;
+            document.getElementById('trendText').innerText = info.desc;
+            document.getElementById('trendAdv').innerText = info.adv;
+            
+            const box = document.getElementById('trendDetailBox');
+            box.classList.remove('active');
+            void box.offsetWidth; 
+            box.classList.add('active');
+        });
+
+        window.addEventListener('resize', () => { radarChart.resize(); lifeChart.resize(); });
+    }
+
+    function unlockPay() { if(confirm("模拟支付 ¥9.9？")) doUnlock(); }
+    function unlockInvite() {
+        Toastify({ text: "🔗 链接已复制！发送给好友", duration: 3000, gravity: "top", position: "center", style: { background: "linear-gradient(to right, #00b09b, #96c93d)" } }).showToast();
+        document.getElementById('inviteStatus').innerText = "状态：等待好友点击...";
+        setTimeout(() => {
+            Toastify({ text: "🎉 好友 [小美] 加入了！", duration: 3000, style: { background: "#00f0ff", color: "#000" } }).showToast();
+            document.getElementById('inviteStatus').innerText = "状态：1/1 (完成)"; document.getElementById('inviteStatus').style.color = "#4caf50";
+            setTimeout(doUnlock, 1000);
+        }, 3000);
+    }
+    function doUnlock() {
+        document.getElementById('unlockOverlay').style.display = 'none';
+        document.getElementById('hiddenContent').classList.add('unlocked');
+        Toastify({ text: "🔓 报告已完整解锁", duration: 2000 }).showToast();
+    }
+    function animateValue(id, start, end, duration) {
+        const obj = document.getElementById(id); let startTimestamp = null;
+        const step = (timestamp) => {
+            if (!startTimestamp) startTimestamp = timestamp;
+            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+            obj.innerHTML = Math.floor(progress * (end - start) + start);
+            if (progress < 1) window.requestAnimationFrame(step);
+        };
+        window.requestAnimationFrame(step);
+    }
 </script>
+
+<style>
+/* 补充漏掉的样式 */
+.date-chip { 
+    display: inline-block; background: #222; padding: 4px 8px; border-radius: 4px; 
+    margin: 4px; font-size: 0.75rem; color: #aaa; border: 1px solid #333; 
+}
+.date-chip span { color: #d4af37; font-weight: bold; margin-right: 5px; }
+</style>
 </body>
 </html>
