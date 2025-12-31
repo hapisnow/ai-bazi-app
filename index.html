@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI 八字决策 | Cyber-BaZi V12.0 Real</title>
+    <title>元策 · AI | Powered by Gemini 3</title>
     <script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.6.12/lunar.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
@@ -38,10 +38,27 @@
 
         .container { width: 100%; max-width: 480px; padding: 0 16px; position: relative; padding-bottom: 60px;}
 
-        /* Header */
-        .header { text-align: center; margin: 20px 0 30px; }
-        .header h1 { color: var(--primary-gold); font-size: 1.6rem; letter-spacing: 2px; text-shadow: 0 0 15px rgba(212, 175, 55, 0.3); }
-        .header p { color: var(--primary-cyan); font-size: 0.65rem; letter-spacing: 3px; text-transform: uppercase; opacity: 0.8; }
+        /* Header 修改点：增强字体气场 */
+        .header { text-align: center; margin: 25px 0 35px; }
+        .header h1 { 
+            color: var(--primary-gold); 
+            font-size: 2.2rem; /* 加大字体 */
+            font-weight: 900;
+            letter-spacing: 8px; /* 增加间距 */
+            text-shadow: 0 0 20px rgba(212, 175, 55, 0.4); 
+            margin-bottom: 5px;
+            font-family: "STSong", "Songti SC", serif; /* 使用宋体更有文化感 */
+        }
+        .header p { 
+            color: var(--primary-cyan); 
+            font-size: 0.75rem; 
+            letter-spacing: 2px; 
+            text-transform: uppercase; 
+            opacity: 0.9; 
+            font-weight: bold;
+            background: linear-gradient(90deg, transparent, rgba(0,240,255,0.1), transparent);
+            padding: 4px 0;
+        }
 
         .card {
             background: var(--glass-bg);
@@ -72,7 +89,7 @@
         .tag-chip { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 6px 14px; font-size: 0.75rem; white-space: nowrap; cursor: pointer; color: #999; }
         .tag-chip.active { background: rgba(0, 240, 255, 0.15); border-color: var(--primary-cyan); color: #fff; box-shadow: 0 0 10px rgba(0,240,255,0.2); }
 
-        /* --- 修改点：正常的按钮区域 --- */
+        /* 按钮区域 */
         .btn-area { margin-top: 25px; }
         .action-btn {
             width: 100%; padding: 16px; 
@@ -104,7 +121,6 @@
         .section-title { color: #fff; font-size: 1rem; font-weight: bold; }
         .tag-free { background: rgba(0, 240, 255, 0.1); color: var(--primary-cyan); padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; }
 
-        /* 决策卡片 */
         .decision-card {
             background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%);
             border-radius: 12px; padding: 20px; border: 1px solid rgba(255,255,255,0.08); margin-bottom: 20px;
@@ -206,8 +222,8 @@
 
 <div class="container">
     <div class="header">
-        <h1>天机 · 决策</h1>
-        <p>CYBER BAZI V11.0</p>
+        <h1>元 策</h1>
+        <p>Powered by Gemini 3</p>
     </div>
 
     <div id="inputCard" class="card">
@@ -359,7 +375,7 @@
     // --- 数据 & 状态 ---
     let currentTag = 'luck'; // 默认
     
-    // 默认大运数据 (兜底用，防止图表空)
+    // 默认大运数据 (兜底)
     let lifeData = [
         { age: "25岁", kw: "等待数据", val: 50, desc: "等待 AI 推演...", adv: "..." },
         { age: "35岁", kw: "等待数据", val: 50, desc: "等待 AI 推演...", adv: "..." },
@@ -372,7 +388,7 @@
     window.onload = function() {
         const defaultLuckBtn = document.querySelector('.tag-chip');
         if(defaultLuckBtn) setPh('luck', defaultLuckBtn);
-        // 初始化日期为今天或固定日期
+        // 初始化日期
         document.getElementById('birthDate').value = "1998-08-08";
     }
 
@@ -400,7 +416,7 @@
         }
     }
 
-    // --- 修改点：真实 API 请求 ---
+    // --- 真实 API 请求 ---
     async function startAnalysis() {
         const btn = document.getElementById('analyzeBtn');
         const errorBox = document.getElementById('errorBox');
@@ -413,7 +429,7 @@
             return;
         }
 
-        // 界面状态更新
+        // 状态更新
         btn.disabled = true;
         btn.innerHTML = "<span>⏳</span> 正在连接天机网络...";
         errorBox.style.display = 'none';
@@ -427,7 +443,7 @@
             birth_month: parseInt(month),
             birth_day: parseInt(day),
             birth_hour: parseInt(document.getElementById('birthHour').value),
-            // 如果是运势模式，传空字符串，后端会自动补全整体运势问题
+            // 如果是运势模式，传空字符串
             event: currentTag === 'luck' ? "" : eventVal, 
             bazi_json: {} 
         };
@@ -477,7 +493,7 @@
         document.getElementById('resName').innerText = document.getElementById('userName').value;
         animateValue('resScore', 0, data.score, 1500);
 
-        // --- 修改点：标题动态逻辑 ---
+        // --- 标题动态逻辑 ---
         const titleEl = document.getElementById('decisionSectionTitle');
         const displayTitle = document.getElementById('decisionTitle');
         const userEvent = document.getElementById('eventInput').value;
@@ -506,14 +522,14 @@
 
         // 渲染大运图表 (如果有真实数据)
         if (data.life_trend && Array.isArray(data.life_trend) && data.life_trend.length > 0) {
-            lifeData = data.life_trend; // 覆盖默认数据
+            lifeData = data.life_trend; 
         }
         
         // 生成所有图表
         renderCharts();
-        generateFreeLuck(); // 保持前端生成的六维评分，维持视觉效果
+        generateFreeLuck();
 
-        // 填充付费内容 (保留占位逻辑)
+        // 填充付费内容
         document.getElementById('paidStrategy').innerHTML = "1. <strong>命局建议：</strong>" + (data.relation || "五行平衡") + "格局。<br>2. <strong>流年机遇：</strong>未来三年利于发展。";
         let datesHtml = "";
         ["3月15日", "6月22日", "9月18日", "11月08日", "12月24日"].forEach(d => {
@@ -524,7 +540,7 @@
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // --- 保持原有的图表渲染逻辑 ---
+    // --- 图表渲染 ---
     function generateFreeLuck() {
         const data = [
             { name: "正财运", star: "⭐⭐⭐⭐", text: "薪资稳定，适合稳扎稳打。" },
