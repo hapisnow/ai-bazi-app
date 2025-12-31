@@ -38,24 +38,16 @@
 
         .container { width: 100%; max-width: 480px; padding: 0 16px; position: relative; padding-bottom: 60px;}
 
-        /* Header 修改点：增强字体气场 */
+        /* Header */
         .header { text-align: center; margin: 25px 0 35px; }
         .header h1 { 
-            color: var(--primary-gold); 
-            font-size: 2.2rem; /* 加大字体 */
-            font-weight: 900;
-            letter-spacing: 8px; /* 增加间距 */
-            text-shadow: 0 0 20px rgba(212, 175, 55, 0.4); 
-            margin-bottom: 5px;
-            font-family: "STSong", "Songti SC", serif; /* 使用宋体更有文化感 */
+            color: var(--primary-gold); font-size: 2.2rem; font-weight: 900;
+            letter-spacing: 8px; text-shadow: 0 0 20px rgba(212, 175, 55, 0.4); 
+            margin-bottom: 5px; font-family: "STSong", "Songti SC", serif;
         }
         .header p { 
-            color: var(--primary-cyan); 
-            font-size: 0.75rem; 
-            letter-spacing: 2px; 
-            text-transform: uppercase; 
-            opacity: 0.9; 
-            font-weight: bold;
+            color: var(--primary-cyan); font-size: 0.75rem; letter-spacing: 2px; 
+            text-transform: uppercase; opacity: 0.9; font-weight: bold;
             background: linear-gradient(90deg, transparent, rgba(0,240,255,0.1), transparent);
             padding: 4px 0;
         }
@@ -362,8 +354,10 @@
                     <div style="padding:0 10px; font-size:0.7rem; color:#666;">OR</div>
                     <div style="flex:1; height:1px; background:#333;"></div>
                 </div>
-                <button class="btn-invite" onclick="unlockInvite()"><span>🔗</span> 邀请 1 位好友免费解锁</button>
-                <div class="invite-note" id="inviteStatus">当前进度：0/1 人</div>
+                <button id="inviteBtn" class="btn-invite" onclick="startInvite()">
+                    <span>🔗</span> 邀请 1 位好友免费解锁
+                </button>
+                <div class="invite-note" id="inviteStatus">邀请状态：未开始</div>
             </div>
         </div>
 
@@ -372,23 +366,92 @@
 </div>
 
 <script>
-    // --- 数据 & 状态 ---
-    let currentTag = 'luck'; // 默认
-    
-    // 默认大运数据 (兜底)
-    let lifeData = [
-        { age: "25岁", kw: "等待数据", val: 50, desc: "等待 AI 推演...", adv: "..." },
-        { age: "35岁", kw: "等待数据", val: 50, desc: "等待 AI 推演...", adv: "..." },
-        { age: "45岁", kw: "等待数据", val: 50, desc: "等待 AI 推演...", adv: "..." },
-        { age: "55岁", kw: "等待数据", val: 50, desc: "等待 AI 推演...", adv: "..." },
-        { age: "65岁", kw: "等待数据", val: 50, desc: "等待 AI 推演...", adv: "..." },
-        { age: "75岁", kw: "等待数据", val: 50, desc: "等待 AI 推演...", adv: "..." }
-    ];
+    // --- 身份与邀请系统 ---
+    let myId = localStorage.getItem('my_uid');
+    if (!myId) {
+        myId = 'u_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('my_uid', myId);
+    }
+
+    // 检测邀请来源 (你是被谁邀请进来的？)
+    (async function checkIncomingInvite() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const refId = urlParams.get('ref');
+        
+        if (refId && refId !== myId) {
+            try {
+                // 告诉后端：refId 成功邀请了一个人（我）
+                await fetch('/api/invite/record', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ ref_id: refId })
+                });
+                console.log("助力成功！邀请人:", refId);
+            } catch(e) { console.error(e); }
+        }
+    })();
+
+    // 邀请与解锁逻辑
+    let pollTimer = null;
+    function startInvite() {
+        const inviteLink = window.location.origin + window.location.pathname + "?ref=" + myId;
+        
+        navigator.clipboard.writeText(inviteLink).then(() => {
+            Toastify({ text: "🔗 链接已复制！发给好友即可", duration: 3000, style: { background: "linear-gradient(to right, #00b09b, #96c93d)" } }).showToast();
+        });
+
+        const statusEl = document.getElementById('inviteStatus');
+        const btn = document.getElementById('inviteBtn');
+        btn.innerText = "⏳ 等待好友点击...";
+        statusEl.innerText = "正在监听数据...";
+        statusEl.style.color = "#00f0ff";
+
+        // 轮询：每2秒查一次是否有新邀请
+        if (pollTimer) clearInterval(pollTimer);
+        pollTimer = setInterval(async () => {
+            try {
+                const res = await fetch(`/api/invite/check?my_id=${myId}`);
+                const data = await res.json();
+                
+                // 只有当可用次数 > 0 时，才执行消耗并解锁
+                if (data.count > 0) {
+                    clearInterval(pollTimer);
+                    consumeAndUnlock(btn, statusEl);
+                }
+            } catch(e) { console.error("轮询失败", e); }
+        }, 2000);
+    }
+
+    async function consumeAndUnlock(btn, statusEl) {
+        try {
+            // 调用消耗接口
+            const res = await fetch('/api/invite/consume', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ ref_id: myId })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                statusEl.innerText = "🎉 消耗 1 次机会，解锁成功！";
+                statusEl.style.color = "#4caf50";
+                btn.innerText = "✅ 验证通过";
+                doUnlock(); // 解锁动画
+            } else {
+                statusEl.innerText = "❌ 次数不足，请继续邀请";
+            }
+        } catch(e) {
+            console.error(e);
+        }
+    }
+
+    // --- 业务逻辑 ---
+    let currentTag = 'luck';
+    let lifeData = [];
 
     window.onload = function() {
         const defaultLuckBtn = document.querySelector('.tag-chip');
         if(defaultLuckBtn) setPh('luck', defaultLuckBtn);
-        // 初始化日期
         document.getElementById('birthDate').value = "1998-08-08";
     }
 
@@ -398,25 +461,22 @@
         el.classList.add('active');
         
         const input = document.getElementById('eventInput');
-        
         if (type === 'luck') {
             input.disabled = true;
             input.value = "";
-            input.placeholder = "查看整体运势，如果想测具体事项可选择其他标签，输入内容";
+            input.placeholder = "查看整体运势...";
             input.style.opacity = "0.6"; input.style.fontStyle = "italic";
         } else {
             input.disabled = false;
             input.value = ""; 
             input.style.opacity = "1"; input.style.fontStyle = "normal";
-            
-            if (type === 'wealth') input.placeholder = "例如：近期想投资股票，或者想知道今年有没有偏财运...";
-            if (type === 'career') input.placeholder = "例如：工作遇到瓶颈想跳槽，或者想知道今年是否有升职机会...";
-            if (type === 'health') input.placeholder = "例如：最近总是感觉疲惫，想知道身体五行哪里失衡...";
-            if (type === 'love') input.placeholder = "例如：单身想知道何时脱单，或者想测算和现在的对象是否合适...";
+            if (type === 'wealth') input.placeholder = "例如：近期想投资股票...";
+            if (type === 'career') input.placeholder = "例如：工作遇到瓶颈想跳槽...";
+            if (type === 'health') input.placeholder = "例如：最近总是感觉疲惫...";
+            if (type === 'love') input.placeholder = "例如：单身想知道何时脱单...";
         }
     }
 
-    // --- 真实 API 请求 ---
     async function startAnalysis() {
         const btn = document.getElementById('analyzeBtn');
         const errorBox = document.getElementById('errorBox');
@@ -424,17 +484,12 @@
         const dateVal = document.getElementById('birthDate').value;
         const eventVal = document.getElementById('eventInput').value;
         
-        if(!name || !dateVal) {
-            showError("请输入姓名和出生日期");
-            return;
-        }
+        if(!name || !dateVal) { showError("请输入姓名和出生日期"); return; }
 
-        // 状态更新
         btn.disabled = true;
         btn.innerHTML = "<span>⏳</span> 正在连接天机网络...";
         errorBox.style.display = 'none';
 
-        // 准备数据
         const [year, month, day] = dateVal.split('-');
         const reqData = {
             name: name,
@@ -443,33 +498,22 @@
             birth_month: parseInt(month),
             birth_day: parseInt(day),
             birth_hour: parseInt(document.getElementById('birthHour').value),
-            // 如果是运势模式，传空字符串
             event: currentTag === 'luck' ? "" : eventVal, 
             bazi_json: {} 
         };
 
         try {
-            // 发起请求
             const resp = await fetch('/api/analyze', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(reqData)
             });
 
-            if (!resp.ok) {
-                throw new Error(`连接失败 (${resp.status})`);
-            }
-
+            if (!resp.ok) throw new Error(`连接失败 (${resp.status})`);
             const data = await resp.json();
+            if (data.score === 0) throw new Error(data.core_text || "解析异常");
 
-            // 检查业务错误
-            if (data.score === 0 || (data.level && data.level.includes("错"))) {
-                throw new Error(data.core_text || "解析数据异常");
-            }
-
-            // 成功渲染
             renderSuccess(data);
-
         } catch (e) {
             showError("推演中断：" + e.message);
         } finally {
@@ -480,8 +524,7 @@
 
     function showError(msg) {
         const box = document.getElementById('errorBox');
-        box.innerText = msg;
-        box.style.display = 'block';
+        box.innerText = msg; box.style.display = 'block';
         if(navigator.vibrate) navigator.vibrate(200);
     }
 
@@ -489,11 +532,9 @@
         document.getElementById('inputCard').classList.add('hidden');
         document.getElementById('resultCard').style.display='block';
         
-        // 渲染基础信息
         document.getElementById('resName').innerText = document.getElementById('userName').value;
         animateValue('resScore', 0, data.score, 1500);
 
-        // --- 标题动态逻辑 ---
         const titleEl = document.getElementById('decisionSectionTitle');
         const displayTitle = document.getElementById('decisionTitle');
         const userEvent = document.getElementById('eventInput').value;
@@ -506,7 +547,6 @@
             displayTitle.innerText = "所测之事：" + (userEvent.length > 15 ? userEvent.substring(0,15)+"..." : userEvent);
         }
 
-        // 渲染 AI 分析内容
         document.getElementById('decisionText').innerHTML = data.core_text;
         document.getElementById('decisionBadge').innerText = (data.level || "吉") + " (" + data.score + ")";
         document.getElementById('decisionRel').innerText = "五行关系：" + (data.relation || "推演中");
@@ -514,22 +554,16 @@
         const badgeClass = data.score >= 80 ? 'badge-good' : (data.score >= 60 ? 'badge-safe' : 'badge-warn');
         document.getElementById('decisionBadge').className = `decision-badge ${badgeClass}`;
 
-        // 渲染 SWOT
         const pros = Array.isArray(data.pros) ? data.pros : [];
         const cons = Array.isArray(data.cons) ? data.cons : [];
         document.getElementById('swotProList').innerHTML = pros.map(p => `<li>${p}</li>`).join('');
         document.getElementById('swotConList').innerHTML = cons.map(c => `<li>${c}</li>`).join('');
 
-        // 渲染大运图表 (如果有真实数据)
-        if (data.life_trend && Array.isArray(data.life_trend) && data.life_trend.length > 0) {
-            lifeData = data.life_trend; 
-        }
+        if (data.life_trend && Array.isArray(data.life_trend)) lifeData = data.life_trend;
         
-        // 生成所有图表
         renderCharts();
         generateFreeLuck();
 
-        // 填充付费内容
         document.getElementById('paidStrategy').innerHTML = "1. <strong>命局建议：</strong>" + (data.relation || "五行平衡") + "格局。<br>2. <strong>流年机遇：</strong>未来三年利于发展。";
         let datesHtml = "";
         ["3月15日", "6月22日", "9月18日", "11月08日", "12月24日"].forEach(d => {
@@ -540,7 +574,6 @@
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // --- 图表渲染 ---
     function generateFreeLuck() {
         const data = [
             { name: "正财运", star: "⭐⭐⭐⭐", text: "薪资稳定，适合稳扎稳打。" },
@@ -580,6 +613,13 @@
         });
 
         const lifeChart = echarts.init(document.getElementById('lifeTrendChart'));
+        if (lifeData.length === 0) {
+            lifeData = [
+                { age: "25岁", kw: "待推演", val: 50, desc: "AI 计算中...", adv: "..." },
+                { age: "75岁", kw: "待推演", val: 50, desc: "AI 计算中...", adv: "..." }
+            ];
+        }
+        
         lifeChart.setOption({
             grid: { top:30, bottom:20, left:40, right:20 },
             xAxis: { type:'category', boundaryGap:false, data: lifeData.map(i=>i.age), axisLine:{show:false}, axisLabel:{color:'#888'} },
@@ -613,20 +653,13 @@
     }
 
     function unlockPay() { if(confirm("模拟支付 ¥9.9？")) doUnlock(); }
-    function unlockInvite() {
-        Toastify({ text: "🔗 链接已复制！发送给好友", duration: 3000, gravity: "top", position: "center", style: { background: "linear-gradient(to right, #00b09b, #96c93d)" } }).showToast();
-        document.getElementById('inviteStatus').innerText = "状态：等待好友点击...";
-        setTimeout(() => {
-            Toastify({ text: "🎉 好友 [小美] 加入了！", duration: 3000, style: { background: "#00f0ff", color: "#000" } }).showToast();
-            document.getElementById('inviteStatus').innerText = "状态：1/1 (完成)"; document.getElementById('inviteStatus').style.color = "#4caf50";
-            setTimeout(doUnlock, 1000);
-        }, 3000);
-    }
+    
     function doUnlock() {
         document.getElementById('unlockOverlay').style.display = 'none';
         document.getElementById('hiddenContent').classList.add('unlocked');
         Toastify({ text: "🔓 报告已完整解锁", duration: 2000 }).showToast();
     }
+    
     function animateValue(id, start, end, duration) {
         const obj = document.getElementById(id); let startTimestamp = null;
         const step = (timestamp) => {
