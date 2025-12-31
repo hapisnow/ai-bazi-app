@@ -2,197 +2,271 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 天机·决策</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AI 天机·决策 V11.0</title>
     <style>
-        :root { --primary: #00f2ea; --bg: #0a0a0f; --card: #13131f; --text: #fff; }
-        body { margin: 0; padding: 20px; background: var(--bg); color: var(--text); font-family: sans-serif; }
-        .container { max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+        :root {
+            --bg-color: #050505;
+            --card-bg: #111115;
+            --input-bg: #1a1a20;
+            --text-gold: #ffd700; /* 截图里的金色 */
+            --text-blue: #00f2ea; /* 截图里的青色 */
+            --text-gray: #888;
+            --border: #333;
+        }
+
+        body { margin: 0; padding: 20px; background: var(--bg-color); color: #fff; font-family: -apple-system, sans-serif; }
+        .container { max-width: 600px; margin: 0 auto; }
+
+        /* 1. 顶部标题区 (还原截图风格) */
+        .header { text-align: center; margin-bottom: 30px; margin-top: 20px; }
+        .main-title { font-size: 28px; font-weight: bold; color: var(--text-gold); letter-spacing: 2px; text-shadow: 0 2px 10px rgba(255, 215, 0, 0.2); }
+        .sub-title { font-size: 12px; color: var(--text-blue); letter-spacing: 3px; margin-top: 5px; font-weight: 600; text-transform: uppercase; }
+
+        /* 2. 输入卡片 (还原截图布局) */
+        .input-card { background: var(--card-bg); padding: 25px; border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+
+        .row { display: flex; gap: 15px; margin-bottom: 20px; }
+        .col { flex: 1; }
         
-        /* 输入区域 */
-        .input-card { background: var(--card); padding: 20px; border-radius: 12px; border: 1px solid #333; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; color: #888; font-size: 14px; }
+        .label { display: block; color: var(--text-gold); font-size: 13px; font-weight: bold; margin-bottom: 8px; }
+        
         input, select, textarea {
-            width: 100%; padding: 10px; background: #000; border: 1px solid #444;
-            color: #fff; border-radius: 6px; box-sizing: border-box;
+            width: 100%; background: var(--input-bg); border: 1px solid var(--border);
+            color: #fff; padding: 12px; border-radius: 8px; font-size: 14px; outline: none; box-sizing: border-box; transition: 0.3s;
         }
-        
-        /* 按钮样式 (普通点击) */
-        .action-btn {
-            width: 100%; padding: 15px; background: var(--primary); color: #000;
-            border: none; border-radius: 8px; font-weight: bold; font-size: 16px;
-            cursor: pointer; margin-top: 10px;
+        input:focus, select:focus, textarea:focus { border-color: var(--text-gold); }
+
+        /* 3. 标签选择区 */
+        .tags-container { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+        .tag {
+            font-size: 12px; padding: 6px 12px; border-radius: 20px; background: #222; border: 1px solid #444; color: #aaa; cursor: pointer; transition: 0.3s;
         }
-        .action-btn:disabled { background: #555; cursor: not-allowed; }
+        .tag.active { background: linear-gradient(45deg, var(--text-blue), #0077ff); color: #000; border-color: transparent; font-weight: bold; }
 
-        /* 结果区域 (还原你的经典布局) */
-        .result-container { display: none; margin-top: 20px; animation: fade 0.5s; }
-        .result-layout { display: flex; gap: 20px; flex-wrap: wrap; }
+        /* 4. 按钮区 */
+        .btn-area { margin-top: 25px; text-align: center; }
+        .start-btn {
+            width: 100%; padding: 16px; background: linear-gradient(90deg, #d4af37, #f7e49a); 
+            color: #3d2e00; font-size: 16px; font-weight: 800; border: none; border-radius: 10px;
+            cursor: pointer; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3); transition: transform 0.2s;
+        }
+        .start-btn:active { transform: scale(0.98); }
+        .start-btn:disabled { background: #444; color: #888; cursor: not-allowed; box-shadow: none; }
+
+        /* 5. 结果展示区 (保持你喜欢的样式) */
+        .result-box { display: none; margin-top: 30px; background: #15151a; border-radius: 16px; border: 1px solid #333; overflow: hidden; animation: slideUp 0.5s ease; }
+        .result-header { background: rgba(255, 215, 0, 0.1); padding: 15px 20px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
+        .result-title { color: var(--text-gold); font-size: 16px; font-weight: bold; }
+        .result-score { font-size: 24px; font-weight: 900; color: var(--text-blue); }
         
-        /* 左侧分数卡 */
-        .score-card { flex: 1; min-width: 200px; background: #1a1a2e; padding: 20px; border-radius: 12px; text-align: center; border: 1px solid #333; }
-        .big-score { font-size: 60px; font-weight: bold; color: var(--primary); margin: 10px 0; }
-        .level-tag { background: rgba(0,242,234,0.1); color: var(--primary); padding: 5px 15px; border-radius: 20px; display: inline-block; }
-
-        /* 右侧文字卡 */
-        .text-card { flex: 2; min-width: 300px; background: var(--card); padding: 20px; border-radius: 12px; border: 1px solid #333; }
-        .card-header { border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 15px; font-size: 18px; font-weight: bold; color: var(--primary); }
-        .content-text { line-height: 1.6; color: #ddd; font-size: 15px; text-align: justify; }
-
-        /* 列表项 */
-        .list-item { margin: 5px 0; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; font-size: 13px; }
-        .pros { border-left: 3px solid #4cd964; }
-        .cons { border-left: 3px solid #ff3b30; }
-
-        .error-msg { display: none; background: #3d0000; color: #ff5555; padding: 10px; border-radius: 6px; margin-top: 10px; text-align: center; }
-
-        @keyframes fade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .result-content { padding: 20px; line-height: 1.8; font-size: 15px; color: #ddd; text-align: justify; }
         
-        /* 手机适配 */
-        @media (max-width: 600px) { .result-layout { flex-direction: column; } }
+        .list-group { margin-top: 15px; font-size: 13px; }
+        .list-item { margin-bottom: 6px; padding: 8px; background: rgba(255,255,255,0.03); border-radius: 6px; }
+
+        /* 错误提示 */
+        .error-toast { 
+            display: none; margin-top: 15px; padding: 12px; background: rgba(255, 69, 58, 0.15); 
+            border: 1px solid #ff453a; color: #ff453a; border-radius: 8px; font-size: 13px; text-align: center;
+        }
+
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="input-card">
-        <h2 style="margin-top:0; color:var(--primary)">天机 · 决策</h2>
-        
-        <div class="form-group">
-            <label>姓名</label>
-            <input type="text" id="name" placeholder="请输入姓名">
-        </div>
-        <div class="form-group">
-            <label>出生年份</label>
-            <input type="number" id="year" placeholder="1998">
-        </div>
-        <div style="display:flex; gap:10px; margin-bottom:15px">
-            <div style="flex:1"><label>月</label><input type="number" id="month" placeholder="8"></div>
-            <div style="flex:1"><label>日</label><input type="number" id="day" placeholder="19"></div>
-            <div style="flex:1"><label>时</label><input type="number" id="hour" placeholder="9"></div>
-        </div>
-        <div class="form-group">
-            <label>性别</label>
-            <select id="gender"><option value="1">男</option><option value="0">女</option></select>
-        </div>
-        <div class="form-group">
-            <label>所测之事 (不填则测整体运势)</label>
-            <textarea id="eventInput" rows="3" placeholder="例如：最近想换工作，是否合适？"></textarea>
-        </div>
-
-        <button id="startBtn" class="action-btn" onclick="startAnalysis()">开始推演</button>
-        <div id="errorBox" class="error-msg"></div>
+    <div class="header">
+        <div class="main-title">天机 · 决策</div>
+        <div class="sub-title">CYBER BAZI V11.0</div>
     </div>
 
-    <div id="resultArea" class="result-container">
-        <div class="result-layout">
-            <div class="score-card">
-                <div class="big-score" id="resScore">--</div>
-                <div class="level-tag" id="resLevel">--</div>
-                <div style="margin-top:20px; text-align:left">
-                    <div style="color:#888; margin-bottom:5px">✅ 有利因素</div>
-                    <div id="resPros"></div>
-                </div>
-                <div style="margin-top:20px; text-align:left">
-                    <div style="color:#888; margin-bottom:5px">⚠️ 潜在风险</div>
-                    <div id="resCons"></div>
+    <div class="input-card">
+        <div class="row">
+            <div class="col" style="flex: 2;">
+                <label class="label">姓名</label>
+                <input type="text" id="name" placeholder="请输入">
+            </div>
+            <div class="col">
+                <label class="label">性别</label>
+                <select id="gender">
+                    <option value="1">男</option>
+                    <option value="0">女</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col" style="flex: 2;">
+                <label class="label">公历生日</label>
+                <div style="display: flex; gap: 5px;">
+                    <input type="number" id="year" placeholder="1998" style="flex:1.5">
+                    <input type="number" id="month" placeholder="08" style="flex:1">
+                    <input type="number" id="day" placeholder="08" style="flex:1">
                 </div>
             </div>
+            <div class="col">
+                <label class="label">时辰</label>
+                <select id="hour">
+                    <option value="0">子 (23-01)</option>
+                    <option value="1">丑 (01-03)</option>
+                    <option value="3">寅 (03-05)</option>
+                    <option value="5">卯 (05-07)</option>
+                    <option value="7">辰 (07-09)</option>
+                    <option value="9" selected>巳 (09-11)</option>
+                    <option value="11">午 (11-13)</option>
+                    <option value="13">未 (13-15)</option>
+                    <option value="15">申 (15-17)</option>
+                    <option value="17">酉 (17-19)</option>
+                    <option value="19">戌 (19-21)</option>
+                    <option value="21">亥 (21-23)</option>
+                </select>
+            </div>
+        </div>
 
-            <div class="text-card">
-                <div class="card-header" id="dynamicTitle">🎯 事项决策推演</div>
-                <div class="content-text" id="resText">正在连接天机网络...</div>
+        <div style="margin-bottom: 10px;">
+            <label class="label">所测何事?</label>
+            <div class="tags-container" id="tagsArea">
+                <div class="tag active" onclick="selectTag('fortune')">✨ 运势</div>
+                <div class="tag" onclick="selectTag('wealth')">💰 财运</div>
+                <div class="tag" onclick="selectTag('career')">💼 事业</div>
+                <div class="tag" onclick="selectTag('health')">💊 健康</div>
+                <div class="tag" onclick="selectTag('love')">❤️ 姻缘</div>
+            </div>
+        </div>
+
+        <textarea id="eventInput" rows="3" placeholder="查看整体运势，如果想测具体事项可选择其他标签，输入内容"></textarea>
+
+        <div class="btn-area">
+            <button class="start-btn" id="analyzeBtn" onclick="start()">开始推演</button>
+        </div>
+        
+        <div class="error-toast" id="errorBox"></div>
+    </div>
+
+    <div class="result-box" id="resultCard">
+        <div class="result-header">
+            <div class="result-title" id="resTitle">整体运势</div>
+            <div class="result-score" id="resScore">--</div>
+        </div>
+        
+        <div class="result-content">
+            <div id="resText">正在链接天机网络...</div>
+            
+            <div class="list-group">
+                <div style="color: #4cd964; margin-bottom:5px; font-weight:bold;">✅ 有利因素</div>
+                <div id="resPros"></div>
+            </div>
+            <div class="list-group" style="margin-top:15px;">
+                <div style="color: #ff3b30; margin-bottom:5px; font-weight:bold;">⚠️ 潜在风险</div>
+                <div id="resCons"></div>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    async function startAnalysis() {
-        const btn = document.getElementById('startBtn');
+    function selectTag(type) {
+        // 标签样式切换
+        const tags = document.querySelectorAll('.tag');
+        tags.forEach(t => t.classList.remove('active'));
+        event.target.classList.add('active');
+
+        const input = document.getElementById('eventInput');
+        
+        // 逻辑：如果是“运势”，清空输入框
+        if (type === 'fortune') {
+            input.value = "";
+            input.placeholder = "查看整体运势，如果想测具体事项可选择其他标签，输入内容";
+        } else {
+            // 其他标签，聚焦输入框提示用户输入
+            input.focus();
+            input.placeholder = "请详细描述您想测算的具体问题...";
+        }
+    }
+
+    async function start() {
+        const btn = document.getElementById('analyzeBtn');
         const errBox = document.getElementById('errorBox');
-        const resArea = document.getElementById('resultArea');
+        const resCard = document.getElementById('resultCard');
+        const eventVal = document.getElementById('eventInput').value.trim();
+        
         const name = document.getElementById('name').value;
         const year = document.getElementById('year').value;
-        const eventVal = document.getElementById('eventInput').value.trim();
 
         // 基础校验
-        if(!name || !year) {
-            alert("请输入姓名和年份！");
+        if (!name || !year) {
+            alert("请至少填写姓名和出生年份");
             return;
         }
 
-        // 状态重置
+        // 1. 标题逻辑：空 -> 整体运势；有字 -> 事项决策
+        const titleElem = document.getElementById('resTitle');
+        if (!eventVal) {
+            titleElem.innerText = "🌟 整体运势";
+        } else {
+            titleElem.innerText = "🎯 事项决策分析";
+        }
+
+        // UI 状态
         btn.disabled = true;
         btn.innerText = "正在推演中...";
         errBox.style.display = 'none';
-        resArea.style.display = 'none';
+        resCard.style.display = 'none';
 
-        // 改动2：标题动态逻辑
-        const titleElem = document.getElementById('dynamicTitle');
-        if (!eventVal) {
-            titleElem.innerText = "🌟 整体运势"; // 没填内容
-        } else {
-            titleElem.innerText = "🎯 事项决策分析"; // 填了内容
-        }
-
-        // 数据准备
         const data = {
             name: name,
             gender: parseInt(document.getElementById('gender').value),
             birth_year: parseInt(year),
             birth_month: parseInt(document.getElementById('month').value) || 1,
             birth_day: parseInt(document.getElementById('day').value) || 1,
-            birth_hour: parseInt(document.getElementById('hour').value) || 12,
+            birth_hour: parseInt(document.getElementById('hour').value),
             event: eventVal,
             bazi_json: {}
         };
 
         try {
-            // 发起请求
             const resp = await fetch('/api/analyze', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             });
 
-            // 改动3：完善报错 (HTTP 错误)
             if (!resp.ok) {
-                throw new Error(`服务器连接失败 (代码: ${resp.status})`);
+                throw new Error(`服务器连接失败 (${resp.status})`);
             }
 
-            const result = await resp.json();
+            const res = await resp.json();
 
-            // 改动3：完善报错 (业务错误)
-            if (result.score === 0 || result.level.includes("报错")) {
-                throw new Error(result.core_text || "API 返回了错误数据");
+            // 业务错误检查
+            if (res.score === 0 || res.level.includes("报错")) {
+                throw new Error(res.core_text || "解析失败");
             }
 
             // 渲染数据
-            document.getElementById('resScore').innerText = result.score;
-            document.getElementById('resLevel').innerText = result.level;
-            document.getElementById('resText').innerText = result.core_text;
+            document.getElementById('resScore').innerText = res.score + "分 · " + res.level;
+            document.getElementById('resText').innerText = res.core_text;
             
             // 渲染列表
-            const prosDiv = document.getElementById('resPros');
-            const consDiv = document.getElementById('resCons');
-            prosDiv.innerHTML = (result.pros || []).map(p => `<div class="list-item pros">${p}</div>`).join('');
-            consDiv.innerHTML = (result.cons || []).map(c => `<div class="list-item cons">${c}</div>`).join('');
+            const pros = Array.isArray(res.pros) ? res.pros : [];
+            const cons = Array.isArray(res.cons) ? res.cons : [];
+            
+            document.getElementById('resPros').innerHTML = pros.map(p => `<div class="list-item">${p}</div>`).join('');
+            document.getElementById('resCons').innerHTML = cons.map(c => `<div class="list-item">${c}</div>`).join('');
 
-            // 显示结果
-            resArea.style.display = 'block';
+            resCard.style.display = 'block';
+            // 滚动到底部
+            setTimeout(() => resCard.scrollIntoView({behavior: "smooth"}), 100);
 
         } catch (e) {
-            // 显示报错框
             errBox.style.display = 'block';
-            errBox.innerText = "❌ 出错啦：" + e.message;
+            errBox.innerText = "🚫 出错啦：" + e.message;
         } finally {
             btn.disabled = false;
             btn.innerText = "开始推演";
         }
     }
 </script>
-
 </body>
 </html>
