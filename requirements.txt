@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AI 八字决策 | 真实推演版</title>
+    <script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.6.12/lunar.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    
+    <style>
+        /* --- 样式部分 (保持不变) --- */
+        :root { --bg-color: #08080a; --primary-red: #ff3333; --primary-gold: #d4af37; --primary-cyan: #00f0ff; --glass-bg: rgba(20, 20, 28, 0.95); --border-color: rgba(255, 255, 255, 0.1); }
+        * { box-sizing: border-box; margin: 0; padding: 0; outline: none; -webkit-tap-highlight-color: transparent; }
+        body { background-color: var(--bg-color); color: #e0e0e0; font-family: "PingFang SC", "Heiti SC", sans-serif; min-height: 100vh; display: flex; justify-content: center; background-image: radial-gradient(circle at 50% 0%, #151520 0%, #000 100%), url('https://images.unsplash.com/photo-1534796636912-3b95b3ab5980?q=80&w=1000&auto=format&fit=crop'); background-size: cover; background-attachment: fixed; padding: 20px 0; }
+        .container { width: 100%; max-width: 480px; padding: 0 16px; position: relative; padding-bottom: 60px;}
+        .header { text-align: center; margin: 20px 0 30px; }
+        .header h1 { color: var(--primary-gold); font-size: 1.6rem; letter-spacing: 2px; text-shadow: 0 0 15px rgba(212, 175, 55, 0.3); }
+        .header p { color: var(--primary-cyan); font-size: 0.65rem; letter-spacing: 3px; text-transform: uppercase; opacity: 0.8; }
+        .card { background: var(--glass-bg); border: 1px solid var(--border-color); border-radius: 16px; padding: 24px; margin-bottom: 24px; backdrop-filter: blur(20px); box-shadow: 0 20px 50px rgba(0,0,0,0.8); }
+        .form-label { display: block; color: var(--primary-gold); font-size: 0.85rem; margin-bottom: 8px; font-weight: 600; }
+        .form-row { display: flex; gap: 10px; margin-bottom: 18px; }
+        .form-col { flex: 1; position: relative; }
+        input, select, textarea { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid #333; border-radius: 8px; padding: 12px; color: #fff; font-size: 0.95rem; transition: 0.3s; font-family: inherit; }
+        input:focus, select:focus, textarea:focus { border-color: var(--primary-cyan); background: rgba(255,255,255,0.08); }
+        textarea:disabled { background: rgba(0,0,0,0.3); border-color: #222; color: #666; font-style: italic; }
+        input[type="date"] { position: relative; z-index: 1; }
+        input[type="date"]::-webkit-calendar-picker-indicator { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 2; }
+        select option { background-color: #1a1a1a; color: #fff; }
+        .tags-container { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: none; }
+        .tag-chip { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 6px 14px; font-size: 0.75rem; white-space: nowrap; cursor: pointer; color: #999; }
+        .tag-chip.active { background: rgba(0, 240, 255, 0.15); border-color: var(--primary-cyan); color: #fff; box-shadow: 0 0 10px rgba(0,240,255,0.2); }
+        .fingerprint-section { text-align: center; margin-top: 15px; user-select: none; }
+        .fingerprint-btn { width: 70px; height: 70px; border: 2px dashed var(--primary-gold); border-radius: 50%; margin: 0 auto; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; color: rgba(212,175,55,0.5); cursor: pointer; position: relative; overflow: hidden; }
+        .fingerprint-btn.scanning { border-style: solid; background: rgba(212,175,55,0.1); box-shadow: 0 0 30px var(--primary-gold); color: var(--primary-gold); }
+        .scan-line { position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: var(--primary-cyan); box-shadow: 0 0 10px var(--primary-cyan); display: none; animation: scan 1.2s linear infinite; }
+        .fingerprint-btn.scanning .scan-line { display: block; }
+        .result-screen { display: none; }
+        .score-row { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid #222; padding-bottom: 15px; }
+        .score-big { font-size: 3.5rem; line-height: 1; font-weight: 800; color: var(--primary-gold); font-family: Impact, sans-serif; }
+        .score-label { font-size: 0.8rem; color: #666; margin-top: 5px; }
+        .user-meta { text-align: right; font-size: 0.8rem; color: #888; }
+        .user-meta span { color: #fff; font-weight: bold; margin-left: 5px; }
+        .section-header { display: flex; align-items: center; justify-content: space-between; margin: 30px 0 15px; border-left: 3px solid var(--primary-gold); padding-left: 10px; }
+        .section-title { color: #fff; font-size: 1rem; font-weight: bold; }
+        .tag-free { background: rgba(0, 240, 255, 0.1); color: var(--primary-cyan); padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; }
+        .decision-card { background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%); border-radius: 12px; padding: 20px; border: 1px solid rgba(255,255,255,0.08); margin-bottom: 20px; }
+        .decision-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px dashed rgba(255,255,255,0.1); }
+        .decision-badge { padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 0.8rem; }
+        .badge-good { background: rgba(76,175,80,0.2); color: #4caf50; border: 1px solid #4caf50; }
+        .badge-warn { background: rgba(255,87,34,0.2); color: #ff5722; border: 1px solid #ff5722; }
+        .badge-safe { background: rgba(0, 240, 255, 0.2); color: var(--primary-cyan); border: 1px solid var(--primary-cyan); }
+        .decision-relation { font-size: 0.8rem; color: #888; }
+        .decision-highlight { color: var(--primary-gold); font-weight: bold; }
+        .decision-event-title { font-size: 0.85rem; color: #ccc; margin-bottom: 12px; font-style: italic; }
+        .decision-core-text { font-size: 0.95rem; color: #e0e0e0; line-height: 1.6; text-align: justify; margin-bottom: 20px; }
+        .swot-box { display: flex; flex-direction: column; gap: 12px; }
+        .swot-section { background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; }
+        .swot-title { font-size: 0.8rem; font-weight: bold; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+        .swot-list { list-style: none; padding: 0; margin: 0; }
+        .swot-list li { font-size: 0.8rem; color: #ccc; margin-bottom: 6px; padding-left: 12px; position: relative; line-height: 1.4; }
+        .swot-list li::before { content: "•"; position: absolute; left: 0; color: #666; }
+        .swot-pro .swot-title { color: #4caf50; } .swot-pro { border-left: 2px solid #4caf50; }
+        .swot-con .swot-title { color: #ff5252; } .swot-con { border-left: 2px solid #ff5252; }
+        .chart-box { width: 100%; height: 240px; }
+        .luck-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+        .luck-item { background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); transition: 0.2s; }
+        .luck-item.high-star { background: linear-gradient(135deg, rgba(212,175,55,0.15) 0%, rgba(212,175,55,0.05) 100%); border: 1px solid rgba(212, 175, 55, 0.4); box-shadow: 0 4px 15px rgba(212, 175, 55, 0.1); }
+        .luck-item.high-star .luck-name { color: var(--primary-gold); }
+        .luck-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .luck-name { font-size: 0.75rem; color: #aaa; font-weight: bold; }
+        .luck-stars { color: var(--primary-gold); font-size: 0.7rem; letter-spacing: 1px; }
+        .luck-desc { font-size: 0.7rem; color: #ccc; line-height: 1.4; }
+        .paywall-container { position: relative; margin-top: 40px; border: 1px solid #333; border-radius: 12px; overflow: hidden; background: #050505; }
+        .blur-content { filter: blur(12px); opacity: 0.4; user-select: none; padding: 20px; transition: 0.6s; }
+        .blur-content.unlocked { filter: none; opacity: 1; user-select: auto; background: rgba(20,20,30,0.5); }
+        .premium-card { margin-bottom: 20px; border-left: 2px solid var(--primary-gold); padding-left: 15px; }
+        .premium-title { font-size: 0.9rem; color: var(--primary-gold); font-weight: bold; margin-bottom: 8px; }
+        .premium-text { font-size: 0.85rem; color: #ccc; line-height: 1.6; text-align: justify; }
+        .unlock-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, rgba(5,5,8,0.85), rgba(5,5,8,0.99)); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10; }
+        .btn-pay { width: 85%; padding: 14px; border-radius: 30px; border: none; font-weight: bold; font-size: 1rem; cursor: pointer; background: linear-gradient(90deg, #d4af37, #f3dba8); color: #000; margin-bottom: 15px; box-shadow: 0 0 20px rgba(212,175,55,0.3); animation: pulse 2s infinite; }
+        .btn-invite { width: 85%; padding: 14px; border-radius: 30px; border: 1px solid var(--primary-cyan); background: rgba(0, 240, 255, 0.1); color: var(--primary-cyan); font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.3s; }
+        .invite-note { font-size: 0.75rem; color: #666; margin-top: 12px; }
+        .trend-info-box { background: rgba(0, 0, 0, 0.3); border: 1px solid #333; border-radius: 12px; padding: 20px; margin-top: 5px; margin-bottom: 20px; position: relative; overflow: hidden; transition: all 0.3s; }
+        .trend-info-box.active { border-color: var(--primary-cyan); background: rgba(0, 240, 255, 0.05); box-shadow: 0 0 15px rgba(0, 240, 255, 0.1); }
+        .trend-age { color: var(--primary-cyan); font-weight: bold; font-size: 1.1rem; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+        .trend-keyword { font-size: 0.7rem; background: rgba(0, 240, 255, 0.2); padding: 2px 6px; border-radius: 4px; color: #fff; font-weight: normal; }
+        .trend-text { color: #ddd; font-size: 0.9rem; line-height: 1.6; text-align: justify; }
+        .trend-hint { font-size: 0.75rem; color: #666; text-align: center; padding: 10px; }
+        .wealth-date-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 10px; }
+        .date-chip { background: #1a1a1a; border: 1px solid #333; padding: 8px; text-align: center; border-radius: 4px; font-size: 0.75rem; color: #fff; }
+        .date-chip span { color: var(--primary-gold); display: block; font-weight: bold; margin-bottom: 2px; }
+        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header"><h1>天机 · 决策</h1><p>CYBER BAZI V11.0</p></div>
+
+    <div id="inputCard" class="card">
+        <div class="form-row">
+            <div class="form-col"><label class="form-label">姓名</label><input type="text" id="userName" placeholder="请输入"></div>
+            <div class="form-col"><label class="form-label">性别</label><select id="userGender"><option value="1">男</option><option value="0">女</option></select></div>
+        </div>
+        <div class="form-row">
+            <div class="form-col" style="flex:2"><label class="form-label">公历生日</label><input type="date" id="birthDate"></div>
+            <div class="form-col"><label class="form-label">时辰</label><select id="birthHour"><option value="9">巳(09-11)</option><option value="23">子(23-01)</option><option value="1">丑(01-03)</option><option value="3">寅(03-05)</option><option value="5">卯(05-07)</option><option value="7">辰(07-09)</option><option value="11">午(11-13)</option><option value="13">未(13-15)</option><option value="15">申(15-17)</option><option value="17">酉(17-19)</option><option value="19">戌(19-21)</option><option value="21">亥(21-23)</option></select></div>
+        </div>
+        <div style="margin-bottom: 20px;">
+            <label class="form-label">所测何事？</label>
+            <div class="tags-container">
+                <div class="tag-chip active" onclick="setPh('luck', this)">🔮 运势</div>
+                <div class="tag-chip" onclick="setPh('wealth', this)">💰 财运</div>
+                <div class="tag-chip" onclick="setPh('career', this)">💼 事业</div>
+                <div class="tag-chip" onclick="setPh('health', this)">💊 健康</div>
+                <div class="tag-chip" onclick="setPh('love', this)">❤️ 姻缘</div>
+            </div>
+            <textarea id="eventInput" rows="3" disabled style="opacity:0.6; font-style:italic;">查看整体运势，如果想测具体事项可选择其他标签，输入内容</textarea>
+        </div>
+        <div class="fingerprint-section">
+            <div class="fingerprint-btn" id="fpBtn" onmousedown="startScan()" onmouseup="endScan()" ontouchstart="startScan()" ontouchend="endScan()">🖐️<div class="scan-line"></div></div>
+            <p class="fingerprint-hint" id="fpHint">长按 3 秒 · 开启推演</p>
+        </div>
+    </div>
+
+    <div id="resultCard" class="card result-screen">
+        <div class="score-row">
+            <div><div class="score-big" id="resScore">0</div><div class="score-label">AI 吉凶综合指数</div></div>
+            <div class="user-meta"><div>命主：<span id="resName">--</span></div><div>八字：<span id="resBazi">--</span></div></div>
+        </div>
+
+        <div class="section-header"><div class="section-title">🎯 事项决策推演 (Free)</div><div class="tag-free">核心分析</div></div>
+        <div class="decision-card">
+            <div class="decision-event-title" id="decisionTitle">所测之事：--</div>
+            <div class="decision-header">
+                <div class="decision-badge" id="decisionBadge">计算中...</div>
+                <div class="decision-relation" id="decisionRel">--</div>
+            </div>
+            <div class="decision-core-text" id="decisionText">分析中...</div>
+            <div class="swot-box">
+                <div class="swot-section swot-pro"><div class="swot-title">✅ 有利因素</div><ul class="swot-list" id="swotProList"></ul></div>
+                <div class="swot-section swot-con"><div class="swot-title">⚠️ 潜在风险</div><ul class="swot-list" id="swotConList"></ul></div>
+            </div>
+        </div>
+
+        <div class="section-header"><div class="section-title">📊 命盘六维全景</div></div>
+        <div id="radarChart" class="chart-box"></div>
+        <div class="luck-grid" id="freeLuckGrid"></div>
+
+        <div class="section-header"><div class="section-title">🐉 人生流年大运</div></div>
+        <div id="lifeTrendChart" class="chart-box"></div>
+        <div class="trend-info-box" id="trendDetailBox">
+            <div class="trend-hint" id="trendDefaultHint">👆 点击上方折线图节点，查看详情</div>
+            <div id="trendContent" style="display:none;"><div class="trend-age" id="trendAge"></div><div class="trend-text" id="trendText"></div></div>
+        </div>
+
+        <div class="paywall-container">
+            <div style="padding:15px; border-bottom:1px solid #222; background:rgba(212,175,55,0.05);"><div style="color:var(--primary-gold); font-weight:bold; font-size:0.9rem;">🔐 深度决策方案 & 避坑指南</div></div>
+            <div class="blur-content" id="hiddenContent">
+                <div class="premium-card" style="border-left-color: var(--primary-cyan);"><div class="premium-title">🔮 灵魂课题</div><div class="premium-text" id="paidSoul"></div></div>
+                <div class="premium-card"><div class="premium-title">🚀 核心破局策略</div><div class="premium-text" id="paidStrategy"></div></div>
+                <div class="premium-card" style="border-left-color: #c471ed;"><div class="premium-title">📅 2025 暴富日历</div><div class="wealth-date-grid" id="paidDates"></div></div>
+                <div class="premium-card"><div class="premium-title">🖼️ 开运头像</div><div class="premium-text" id="paidAvatar"></div></div>
+            </div>
+            <div class="unlock-overlay" id="unlockOverlay">
+                <button class="btn-pay" onclick="unlockPay()">解锁完整报告 (¥9.9)</button>
+                <div style="display:flex; align-items:center; width:85%; margin:10px 0;"><div style="flex:1; height:1px; background:#333;"></div><div style="padding:0 10px; font-size:0.7rem; color:#666;">OR</div><div style="flex:1; height:1px; background:#333;"></div></div>
+                <button class="btn-invite" onclick="unlockInvite()"><span>🔗</span> 邀请 1 位好友免费解锁</button>
+                <div class="invite-note" id="inviteStatus">当前进度：0/1 人</div>
+            </div>
+        </div>
+        <button style="width:100%; padding:15px; background:transparent; border:1px solid #333; color:#666; margin-top:30px; border-radius:8px;" onclick="location.reload()">再测一事</button>
+    </div>
+</div>
+
+<script>
+    // --- 逻辑部分 ---
+    let currentTag = 'luck';
+    window.onload = function() {
+        const defaultLuckBtn = document.querySelector('.tag-chip');
+        if(defaultLuckBtn) setPh('luck', defaultLuckBtn);
+        document.getElementById('birthDate').valueAsDate = new Date();
+    }
+
+    function setPh(type, el) {
+        currentTag = type;
+        document.querySelectorAll('.tag-chip').forEach(c => c.classList.remove('active'));
+        el.classList.add('active');
+        const input = document.getElementById('eventInput');
+        if (type === 'luck') {
+            input.disabled = true; input.value = "查看整体运势，如果想测具体事项可选择其他标签，输入内容";
+            input.style.opacity = "0.6"; input.style.fontStyle = "italic";
+        } else {
+            input.disabled = false; input.value = ""; input.style.opacity = "1"; input.style.fontStyle = "normal";
+            const map = {'wealth':"例如：近期想投资股票...",'career':"例如：工作遇到瓶颈想跳槽...",'health':"例如：最近总是感觉疲惫...",'love':"例如：单身想知道何时脱单..."};
+            input.placeholder = map[type] || "请输入...";
+        }
+    }
+
+    let scanTimer = null, isScanning = false;
+    const fpBtn = document.getElementById('fpBtn'), fpHint = document.getElementById('fpHint');
+
+    function startScan() {
+        if(isScanning) return;
+        fpBtn.classList.add('scanning'); fpHint.innerText = "正在连接真实命理数据...";
+        let p = 0; scanTimer = setInterval(() => { p+=2; if(p>=100) completeScan(); }, 30);
+    }
+    function endScan() { if(!isScanning) { clearInterval(scanTimer); fpBtn.classList.remove('scanning'); fpHint.innerText="长按 3 秒 · 开启推演"; } }
+    function completeScan() {
+        clearInterval(scanTimer); isScanning=true; fpHint.innerText="推演完成"; fpBtn.style.borderColor="#fff"; fpBtn.style.color="#fff";
+        performRealCalculation();
+    }
+
+    // --- 核心：真实调用后端 ---
+    async function performRealCalculation() {
+        const name = document.getElementById('userName').value || "缘主";
+        const gender = parseInt(document.getElementById('userGender').value);
+        const dateStr = document.getElementById('birthDate').value; 
+        const hour = parseInt(document.getElementById('birthHour').value);
+        const eventText = document.getElementById('eventInput').value;
+
+        // 1. 排盘
+        const dateObj = new Date(dateStr);
+        const solar = Solar.fromYmdHms(dateObj.getFullYear(), dateObj.getMonth()+1, dateObj.getDate(), hour, 0, 0);
+        const lunar = solar.getLunar();
+        const bazi = lunar.getBaZi(); 
+        const dayMaster = bazi[4];
+
+        // 2. 统计五行
+        const wuxingCnt = {'金':0, '木':0, '水':0, '火':0, '土':0};
+        for(let i=0; i<8; i++) {
+            const char = bazi[i];
+            const wx = LunarUtil.WU_XING_GAN[char] || LunarUtil.WU_XING_ZHI[char];
+            if(wx) wuxingCnt[wx]++;
+        }
+
+        const payload = {
+            name: name, gender: gender,
+            birth_year: dateObj.getFullYear(), birth_month: dateObj.getMonth()+1, birth_day: dateObj.getDate(), birth_hour: hour,
+            event: currentTag === 'luck' ? "请分析2025年流年整体运势" : eventText,
+            bazi_json: { day_master: dayMaster, wuxing_count: wuxingCnt, ganzhi: bazi }
+        };
+
+        try {
+            document.getElementById('inputCard').classList.add('hidden');
+            document.getElementById('resultCard').style.display='block';
+            
+            // 3. 发送请求
+            const response = await fetch('http://127.0.0.1:8000/api/analyze', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+            });
+            if (!response.ok) throw new Error("Network Error");
+            const aiData = await response.json();
+
+            // 4. 渲染数据
+            renderRealData(aiData, name, dayMaster, wuxingCnt);
+
+        } catch (e) {
+            console.error(e);
+            alert("无法连接算命服务器，将展示本地演示数据。请确认 main.py 已启动。");
+            // 演示数据兜底
+            renderRealData({
+                score: 78, level: "小有所成", relation: "金水相涵",
+                core_text: "演示模式：后端未连接。阁下日元得地，2025年运势总体平稳。",
+                pros: ["贵人暗助","财源广进"], cons: ["注意烂桃花","防破财"],
+                life_trend: [60,70,65,80,90,75],
+                paid_content: { soul:"学会拒绝", strategy:"多穿红色", dates:["3月1日"], avatar:"山水画" }
+            }, name, dayMaster, wuxingCnt);
+        }
+    }
+
+    function renderRealData(data, name, dayMaster, wuxingCnt) {
+        animateValue('resScore', 0, data.score, 1500);
+        document.getElementById('resName').innerText = name;
+        document.getElementById('resBazi').innerText = dayMaster + "命";
+
+        document.getElementById('decisionTitle').innerText = data.level; 
+        const badgeEl = document.getElementById('decisionBadge');
+        badgeEl.innerText = data.level;
+        badgeEl.className = 'decision-badge ' + (data.score >= 80 ? 'badge-good' : (data.score >= 60 ? 'badge-safe' : 'badge-warn'));
+        
+        document.getElementById('decisionRel').innerText = "五行：" + data.relation;
+        document.getElementById('decisionText').innerText = data.core_text;
+        document.getElementById('swotProList').innerHTML = data.pros.map(i=>`<li>${i}</li>`).join('');
+        document.getElementById('swotConList').innerHTML = data.cons.map(i=>`<li>${i}</li>`).join('');
+
+        document.getElementById('paidSoul').innerText = data.paid_content.soul;
+        document.getElementById('paidStrategy').innerText = data.paid_content.strategy;
+        document.getElementById('paidAvatar').innerText = data.paid_content.avatar;
+        document.getElementById('paidDates').innerHTML = data.paid_content.dates.map(d=>`<div class="date-chip"><span>${d}</span>吉日</div>`).join('');
+
+        renderCharts(wuxingCnt, data.life_trend);
+        generateFreeLuck(); // 本地生成六维展示
+    }
+
+    // ... 图表和辅助函数 ...
+    function generateFreeLuck() {
+        const data = [
+            { name: "正财运", star: "⭐⭐⭐⭐", text: "薪资稳定。" }, { name: "偏财运", star: "⭐", text: "风险极高。" },
+            { name: "事业运", star: "⭐⭐⭐", text: "有贵人助。" }, { name: "感情运", star: "⭐⭐", text: "伴侣争吵。" },
+            { name: "健康运", star: "⭐⭐⭐", text: "注意睡眠。" }, { name: "贵人运", star: "⭐⭐⭐⭐⭐", text: "长辈提携。" }
+        ];
+        let html = "";
+        data.forEach(item => {
+            const isHigh = item.star.length >= 4;
+            html += `<div class="luck-item ${isHigh?'high-star':''}"><div class="luck-head"><span class="luck-name">${item.name}</span><span class="luck-stars">${item.star}</span></div><div class="luck-desc">${item.text}</div></div>`;
+        });
+        document.getElementById('freeLuckGrid').innerHTML = html;
+    }
+
+    function renderCharts(wuxing, trend) {
+        // ... (保持之前的图表逻辑) ...
+        const radarData = [wuxing['金']*20+20, wuxing['木']*20+20, wuxing['水']*20+20, wuxing['火']*20+20, wuxing['土']*20+20, 80];
+        const radarChart = echarts.init(document.getElementById('radarChart'));
+        radarChart.setOption({
+            radar: { indicator: [{name:'金',max:100},{name:'木',max:100},{name:'水',max:100},{name:'火',max:100},{name:'土',max:100},{name:'贵人',max:100}], shape:'polygon', splitNumber:4, axisName:{color:'#d4af37'}, splitLine:{lineStyle:{color:'rgba(255,255,255,0.1)'}}, splitArea:{show:false}, axisLine:{lineStyle:{color:'rgba(255,255,255,0.1)'}} },
+            series: [{ type:'radar', data:[{value:radarData, name:'命盘', itemStyle:{color:'#00f0ff'}, areaStyle:{color:'rgba(0,240,255,0.3)'}, lineStyle:{width:2,color:'#00f0ff'}}] }]
+        });
+
+        const lifeChart = echarts.init(document.getElementById('lifeTrendChart'));
+        lifeChart.setOption({
+            grid: { top:30, bottom:20, left:40, right:20 },
+            xAxis: { type:'category', boundaryGap:false, data:['25岁','35岁','45岁','55岁','65岁','75岁'], axisLine:{show:false}, axisLabel:{color:'#888'} },
+            yAxis: { type:'value', splitLine:{lineStyle:{color:'#222'}}, axisLabel:{color:'#666'} },
+            series: [{ type:'line', smooth:true, data:trend, symbol:'circle', symbolSize:10, itemStyle:{color:'#d4af37',borderColor:'#fff',borderWidth:2}, lineStyle:{width:3,color:'#d4af37'}, areaStyle:{color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(212,175,55,0.4)'},{offset:1,color:'rgba(0,0,0,0)'}])} }]
+        });
+        
+        lifeChart.on('click', function(params) {
+            document.getElementById('trendDefaultHint').style.display = 'none';
+            document.getElementById('trendContent').style.display = 'block';
+            document.getElementById('trendAge').innerHTML = params.name;
+            document.getElementById('trendText').innerText = "该大运区间详细运势解析...";
+            document.getElementById('trendDetailBox').classList.add('active');
+        });
+        window.addEventListener('resize', () => { radarChart.resize(); lifeChart.resize(); });
+    }
+
+    function unlockPay() { if(confirm("模拟支付 ¥9.9？")) doUnlock(); }
+    function unlockInvite() {
+        Toastify({ text: "🔗 链接已复制！", duration: 3000, style: { background: "linear-gradient(to right, #00b09b, #96c93d)" } }).showToast();
+        document.getElementById('inviteStatus').innerText = "状态：等待点击...";
+        setTimeout(() => {
+            Toastify({ text: "🎉 好友加入！", duration: 3000, style: { background: "#00f0ff", color: "#000" } }).showToast();
+            document.getElementById('inviteStatus').innerText = "状态：完成"; document.getElementById('inviteStatus').style.color = "#4caf50";
+            setTimeout(doUnlock, 1000);
+        }, 3000);
+    }
+    function doUnlock() { document.getElementById('unlockOverlay').style.display = 'none'; document.getElementById('hiddenContent').classList.add('unlocked'); Toastify({ text: "🔓 已解锁", duration: 2000 }).showToast(); }
+    function animateValue(id, start, end, duration) {
+        const obj = document.getElementById(id); let startTimestamp = null;
+        const step = (timestamp) => {
+            if (!startTimestamp) startTimestamp = timestamp;
+            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+            obj.innerHTML = Math.floor(progress * (end - start) + start);
+            if (progress < 1) window.requestAnimationFrame(step);
+        };
+        window.requestAnimationFrame(step);
+    }
+</script>
+</body>
+</html>
